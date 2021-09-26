@@ -1,6 +1,7 @@
 const path = require('path')
 const env = {
   PROJECT_DIR: __dirname,
+  DATABASE_DIR: path.join(__dirname, "database"),
   SERVER_PORT: 8000,
 };
 
@@ -23,16 +24,11 @@ const format = {
   height: 2000,
 };
 
-const rarity = [];
-
-const defaultEdition = 5;
 
 module.exports = {
   env,
   layersOrder,
   format,
-  rarity,
-  defaultEdition,
   buildDir,
   layersDir,
 };
