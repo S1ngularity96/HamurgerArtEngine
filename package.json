@@ -1,0 +1,16 @@
+{
+  "name": "imageminter",
+  "version": "1.0.0",
+  "description": "Generates random images and ERC721 metadata from multiple image layers",
+  "main": "index.js",
+  "repository": "git@github.com:WickedMolley/ImageMinter.git",
+  "author": "Andrei Alexeev <andrei.alexeev1996@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "canvas": "^2.8.0",
+    "cors": "^2.8.5",
+    "crypto-js": "^4.1.1",
+    "express": "^4.17.1",
+    "morgan": "^1.10.0"
+  }
+}
