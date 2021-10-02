@@ -6,12 +6,16 @@
   "repository": "git@github.com:WickedMolley/ImageMinter.git",
   "author": "Andrei Alexeev <andrei.alexeev1996@gmail.com>",
   "license": "MIT",
+  "scripts": {
+    "serve": "MODE=production node index.js"
+  },
   "dependencies": {
     "canvas": "^2.8.0",
     "cors": "^2.8.5",
     "crypto-js": "^4.1.1",
     "express": "^4.17.1",
     "morgan": "^1.10.0",
-    "sqlite3": "^5.0.2"
+    "sqlite3": "^5.0.2",
+    "validate.js": "^0.13.1"
   }
 }
