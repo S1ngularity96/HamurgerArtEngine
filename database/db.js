@@ -1,5 +1,5 @@
 const sqlite3 = require("sqlite3");
-var db = new sqlite3.cached.Database(":memory:");
+var db = new sqlite3.Database(":memory:");
 
 let layers = `CREATE TABLE IF NOT EXISTS Layer(
     id integer PRIMARY KEY AUTOINCREMENT,
@@ -8,12 +8,13 @@ let layers = `CREATE TABLE IF NOT EXISTS Layer(
   );`;
 
 let images = `CREATE TABLE IF NOT EXISTS Image(
-    id integer PRIMARY KEY AUTOINCREMENT,
-    filepath text NOT NULL,
-    hash text NOT NULL,
-    layer integer not null,
-    foreign key (layer) references Layer (id) ON DELETE CASCADE,
-    UNIQUE(hash)
+  id integer PRIMARY KEY AUTOINCREMENT,
+  name text NOT NULL,
+  filepath text NOT NULL,
+  hash text NOT NULL,
+  layer integer not null,
+  foreign key (layer) references Layer (id),
+  UNIQUE(hash)
 );`;
 
 let imageattributes = `CREATE TABLE IF NOT EXISTS ImageAttribute(
@@ -25,20 +26,17 @@ let imageattributes = `CREATE TABLE IF NOT EXISTS ImageAttribute(
 function init() {
   let promise = new Promise((resolve, reject) => {
     db.serialize(() => {
-      db.run(layers, (_, err) => {
-        if (err) reject(err);
+      db.run(`${layers} ${images} ${imageattributes}`, (result, err) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(result);
+        }
       });
-      db.run(images, (_, err) => {
-        if (err) reject(err);
-      });
-      db.run(imageattributes, (_, err) => {
-        if (err) reject(err);
-      });
-      resolve();
     });
   });
 
   return promise;
 }
 
-module.exports = {db, init};
+module.exports = { db, init };
