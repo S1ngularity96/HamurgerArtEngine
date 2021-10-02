@@ -22,13 +22,24 @@ backend.all("/api/*", function (req, res) {
   );
 });
 
+const { db, init } = require("../database/db");
+
 
 
 async function StartServer() {
+  try{
+    await init();
+  }catch(err){
+    console.log("Could not create database");
+  }
   const server = http.createServer(backend);
   server.listen(env.SERVER_PORT, function () {
     console.log("Server listening on port " + env.SERVER_PORT);
   });
 }
+
+process.on("exit", () => {
+  db.close();
+});
 
 module.exports = { StartServer };
