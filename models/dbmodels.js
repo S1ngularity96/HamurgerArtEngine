@@ -1,41 +1,79 @@
-const { db } = require("../database/db");
+const { DataTypes, Model } = require("sequelize");
+const sequelize = require("../database/db");
+class Layer extends Model {}
+class Image extends Model {}
+class ImageAttribute extends Model {}
 
-function InsertLayer(name) {
-  return new Promise((resolve, reject) => {
-    let stmt = db.prepare(`INSERT INTO Layer (name) VALUES (?)`);
-    stmt.run([name], (result, err) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(result);
-      }
-    });
-    stmt.finalize();
-  });
-}
+Layer.init(
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+    },
+    name: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    layerorder: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+  },
+  {
+    sequelize,
+    modelName: "layer",
+  }
+);
 
-function GetAllLayers() {
-  return new Promise((resolve, reject) => {
-    db.all("SELECT id, name, layerorder FROM Layer", [], (err, rows) => {
-      if (err) reject(err);
-      else resolve(rows);
-    });
-  });
-}
+Image.init(
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+    },
+    hash: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
+    },
+    name: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    filepath: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+  },
+  { sequelize, modelName: "image" }
+);
 
-function GetLayerById(id) {
-}
+ImageAttribute.init(
+  {
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+    },
+    rarity: {
+      type: DataTypes.REAL,
+    },
+  },
+  { sequelize, modelName: "attributes" }
+);
 
-function InsertImage() {
-}
+Image.Layer = Image.belongsTo(Layer, {
+  as: "layer",
+  foreignKey: { allowNull: false, field: "layer" },
+});
+Layer.Images = Layer.hasMany(Image);
 
-function GetImageAttributesById() {
-}
+ImageAttribute.Image = ImageAttribute.belongsTo(Image, {
+  as: "image",
+  foreignKey: { allowNull: false, field: "image" },
+});
+Image.attributes = Image.hasOne(ImageAttribute);
 
-function GetImageById() {
-}
-
-module.exports = {
-  InsertLayer,
-  GetAllLayers,
-};
+module.exports = { db: sequelize, Image: Image, ImageAttribute: ImageAttribute, Layer: Layer };
