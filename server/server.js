@@ -2,14 +2,14 @@ const express = require("express");
 const http = require("http");
 const logger = require("morgan");
 const cors = require("cors");
-const path = require('path')
+const path = require("path");
 
 const backend = express();
 backend.use(cors());
 backend.use(logger("dev"));
 backend.use(express.json());
 backend.use(express.urlencoded({ extended: true }));
-const apiResponse = require('./helper/api');
+const apiResponse = require("./helper/api");
 const router = require("./router/api");
 const { env } = require("../config");
 
@@ -18,19 +18,18 @@ backend.use("/api", router);
 backend.all("/api/*", function (req, res) {
   apiResponse.BadRequestResponse(
     res,
-    `Api with Method ${req.method} and origin ${req.originalUrl} does not exist`,
+    `Api with Method ${req.method} and origin ${req.originalUrl} does not exist`
   );
 });
 
-const { db, init } = require("../database/db");
-
-
+const { db } = require("./../models/dbmodels");
 
 async function StartServer() {
-  try{
-    await init();
-  }catch(err){
+  try {
+    await db.sync();
+  } catch (err) {
     console.log("Could not create database");
+    process.exit(1);
   }
   const server = http.createServer(backend);
   server.listen(env.SERVER_PORT, function () {
