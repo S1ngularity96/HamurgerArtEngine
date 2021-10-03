@@ -3,7 +3,7 @@ const fs = require("fs");
 const { env } = require("../../config");
 const api = require("../helper/api");
 const settingsFile = path.join(env.DATABASE_DIR, "settings.json");
-const {flatValidate, settingsConstraints} = require('../helper/validate')
+const { flatValidate, settingsConstraints } = require("../helper/validate");
 function getSettings(req, res) {
   if (!fs.existsSync(settingsFile)) {
     let defaultSettings = {
@@ -12,12 +12,13 @@ function getSettings(req, res) {
       priceDefault: 0,
       priceMin: 0,
       priceMax: 0,
+      imageHeigth: 0,
+      imageWidth: 0,
+      thumbnailHeigth: 0,
+      thumbnailWidth: 0,
     };
 
-    fs.writeFileSync(
-      settingsFile,
-      JSON.stringify(defaultSettings),
-    );
+    fs.writeFileSync(settingsFile, JSON.stringify(defaultSettings));
     api.successResponseWithData(res, "OK", defaultSettings);
   } else {
     let settingsText = fs.readFileSync(settingsFile);
@@ -26,22 +27,22 @@ function getSettings(req, res) {
 }
 
 function postSettings(req, res, next) {
-    let settings = req.body;
-    let validation = flatValidate(settings, settingsConstraints);
-    if(validation){
-        api.BadRequestResponse(res, validation);
-        return;
-    }
-    try{
-        fs.writeFileSync(settingsFile, JSON.stringify(settings)); 
-        next();
-        return;
-    }catch(err){
-        api.ErrorResponse(res, err.toString());
-    }
+  let settings = req.body;
+  let validation = flatValidate(settings, settingsConstraints);
+  if (validation) {
+    api.BadRequestResponse(res, validation);
+    return;
+  }
+  try {
+    fs.writeFileSync(settingsFile, JSON.stringify(settings));
+    next();
+    return;
+  } catch (err) {
+    api.ErrorResponse(res, err.toString());
+  }
 }
 
 module.exports = {
-    getSettings,
-    postSettings
-}
+  getSettings,
+  postSettings,
+};
