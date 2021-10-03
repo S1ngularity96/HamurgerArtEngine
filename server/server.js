@@ -37,10 +37,7 @@ async function StartServer() {
   }
   const server = http.createServer(backend);
   server.listen(env.SERVER_PORT, function () {
-    console.log("Server listening on port " + env.SERVER_PORT);
+    console.log(`Server listening on port http://localhost:${env.SERVER_PORT}/`);
   });
 }
-
-
-
 module.exports = { StartServer };
