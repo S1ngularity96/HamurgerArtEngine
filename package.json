@@ -8,6 +8,7 @@
   "license": "MIT",
   "scripts": {
     "serve": "MODE=production node index.js",
+    "dev": "MODE=development node index.js",
     "test": "mocha ./tests/**/*.js"
   },
   "dependencies": {
