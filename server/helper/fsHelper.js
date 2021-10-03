@@ -4,7 +4,8 @@ const path = require("path");
 const crypto = require("crypto-js");
 
 function findPngsInDirectory(dir, formatter) {
-  fs.readdirSync(dir)
+  return fs
+    .readdirSync(dir)
     .filter((file) => file.endsWith(".png"))
     .map((file) => {
       if (formatter) {
@@ -21,20 +22,16 @@ function getIndex(layersDir) {
     .filter((dirent) => dirent.isDirectory())
     .map((dirent) => dirent.name);
 
-  layers.map((name) => {
+  return layers.map((name) => {
     let files = findPngsInDirectory(path.join(layersDir, name), (file) => {
       return {
-        hash: crypto.MD5(file),
-        name: file.replace(".png", ""),
-        filepath: file,
+        hash: crypto.MD5(file).toString(),
+        name: file,
+        filepath: path.join(name, file),
       };
     });
-    let layer = {
-      name: name,
-      files: files,
-      size: files.length,
-    };
-    return layer;
+
+    return { name: name, files: files, size: files.length };
   });
 }
 
