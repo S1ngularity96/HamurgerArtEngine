@@ -117,6 +117,8 @@ async function postTraitAttributes(req, res) {
   }
 }
 
+async function postExclusionSet(req,res){}
+
 module.exports = {
   getLayer,
   getLayers,
