@@ -27,6 +27,10 @@ const { db } = require("./../models/dbmodels");
 async function StartServer() {
   try {
     await db.sync();
+
+    process.on("exit", () => {
+      db.close();
+    });
   } catch (err) {
     console.log("Could not create database");
     process.exit(1);
@@ -37,8 +41,6 @@ async function StartServer() {
   });
 }
 
-process.on("exit", () => {
-  db.close();
-});
+
 
 module.exports = { StartServer };
