@@ -9,7 +9,7 @@
   "scripts": {
     "serve": "MODE=production node index.js",
     "dev": "MODE=development node index.js",
-    "test": "mocha ./tests/**/*.js"
+    "test": "MODE=test mocha ./tests/**/*.js"
   },
   "dependencies": {
     "canvas": "^2.8.0",
@@ -22,6 +22,8 @@
     "validate.js": "^0.13.1"
   },
   "devDependencies": {
+    "chai": "^4.3.4",
+    "chai-http": "^4.3.0",
     "mocha": "^9.1.2"
   }
 }

@@ -1,7 +1,8 @@
 const api = require("../helper/api");
-const { Layer, Image, ImageAttribute, db } = require("../../models/dbmodels");
+const { Layer, Image, ImageAttribute, ImageGroup, Group } = require("../../models/dbmodels");
 const { layersDir } = require("../../config");
 const { getIndex } = require("../helper/fsHelper");
+const { groupConstraints, flatValidate } = require("../helper/validate");
 
 async function getLayers(req, res) {
   try {
@@ -17,15 +18,8 @@ async function getLayers(req, res) {
 
 async function getImages(req, res) {
   try {
-    let layerMap = new Map();
-    let layers = await Layer.findAll({ raw: true });
-    layers.forEach((layer) => {
-      layerMap.set(layer.id, layer.name);
-    });
-    let images = await Image.findAll({ raw: true });
-    images = images.map((image) => {
-      image.layername = layerMap.get(image.layerId);
-      return image;
+    let images = await Image.findAll({
+      include: { model: Layer, as: "layer", attributes: ["name"] },
     });
     api.successResponseWithData(res, "OK", images);
   } catch (err) {
@@ -77,10 +71,10 @@ async function getLayersReload(req, res) {
 }
 
 async function getLayer(req, res) {
-  let name = req.params.name;
-  if (name) {
+  let id = req.params.id;
+  if (id) {
     let layer = await Layer.findOne({
-      where: { name: name },
+      where: { id: id },
       include: [{ model: Image, as: "images" }],
     });
     api.successResponseWithData(res, "OK", layer);
@@ -117,7 +111,96 @@ async function postTraitAttributes(req, res) {
   }
 }
 
-async function postExclusionSet(req,res){}
+async function getGroups(req, res) {
+  try {
+    let groups = await Group.findAll({
+      include: {
+        model: Image,
+        through: ImageGroup,
+        as: "images",
+        include: { model: Layer, attributes: ["name"], as: "layer" },
+      },
+    });
+    api.successResponseWithData(res, "OK", groups);
+  } catch (err) {
+    api.ErrorResponse(res, err.toString());
+  }
+}
+
+async function getGroup(req, res) {
+  try {
+    let groupId = req.params.id;
+    let group = await Group.findOne({
+      where: { id: groupId },
+      include: {
+        model: Image,
+        through: ImageGroup,
+        include: { model: Layer, as: "layer", attributes: ["name"] },
+      },
+    });
+    api.successResponseWithData(res, "OK", group);
+  } catch (err) {
+    api.BadRequestResponse(res, err.toString());
+  }
+}
+
+async function patchGroup(req, res, next) {
+  let groupId = req.params.id;
+  let validate = flatValidate(req.body, groupConstraints);
+  if (validate) {
+    api.BadRequestResponse(res, validate);
+  }
+
+  if (groupId) {
+    let images = req.body.images;
+    try {
+      await ImageGroup.destroy({ where: { groupId: groupId } });
+      for (let image = 0; image < images.length; image++) {
+        await ImageGroup.create({ imageId: images[image].id, groupId: groupId });
+      }
+      await Group.update(
+        { name: req.body.name, exclusive: req.body.exclusive },
+        { where: { id: groupId } }
+      );
+      next();
+    } catch (err) {
+      api.ErrorResponse(res, err.toString());
+    }
+  } else {
+    api.BadRequestResponse(res, "No group id was given");
+  }
+}
+
+async function postGroup(req, res, next) {
+  let validation = flatValidate(req.body, groupConstraints);
+  if (validation) {
+    api.BadRequestResponse(res, validation);
+    return;
+  }
+  try {
+    await Group.create({ name: req.body.name, exclusive: req.body.exclusive });
+    next();
+  } catch (err) {
+    api.ErrorResponse(res, err.toString());
+  }
+}
+
+async function deleteGroup(req, res, next) {
+  let groupid = req.params.id;
+
+  if (groupid) {
+    try {
+      await Group.destroy({ where: { id: groupid } });
+      next();
+    } catch (err) {
+      api.ErrorResponse(res, err.toString());
+    }
+  } else {
+    api.BadRequestResponse(res, "No group id was given");
+  }
+}
+
+async function postExclusionSet(req, res) {}
 
 module.exports = {
   getLayer,
@@ -127,4 +210,9 @@ module.exports = {
   getLayersReload,
   getTraitAttributes,
   postTraitAttributes,
+  getGroup,
+  getGroups,
+  postGroup,
+  deleteGroup,
+  patchGroup,
 };

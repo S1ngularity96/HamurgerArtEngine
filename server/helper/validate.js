@@ -1,9 +1,7 @@
 const validate = require("validate.js");
 
-validate.validators.priceIsBetween = function (_,_,_, value) {
-  if (
-    value.priceDefault >= value.priceMin && value.priceDefault <= value.priceMax
-  ) {
+validate.validators.priceIsBetween = function (_, _, _, value) {
+  if (value.priceDefault >= value.priceMin && value.priceDefault <= value.priceMax) {
     return null;
   }
   return "is not between range of min and max price";
@@ -42,11 +40,26 @@ let settingsConstraints = {
   },
 };
 
-function flatValidate(object, constraints){
-    return validate(object, constraints, {format: "flat"});
+let groupConstraints = {
+  name: {
+    presence: true,
+    type: "string",
+  },
+  exclusive: {
+    presence: true,
+    type: "boolean",
+  },
+  images: {
+    type: "array",
+  },
+};
+
+function flatValidate(object, constraints) {
+  return validate(object, constraints, { format: "flat" });
 }
 
 module.exports = {
-    flatValidate,
-    settingsConstraints
-}
+  flatValidate,
+  settingsConstraints,
+  groupConstraints,
+};

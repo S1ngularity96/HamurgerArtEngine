@@ -52,7 +52,7 @@ Group.init(
     },
     name: {
       type: DataTypes.STRING,
-      unique: true,
+      unique: { msg: "Group with this name exists" },
       allowNull: false,
     },
     exclusive: {
@@ -62,7 +62,7 @@ Group.init(
   },
   {
     sequelize,
-    modelName: "imagegroup",
+    modelName: "group",
   }
 );
 
@@ -152,17 +152,8 @@ ExclusionGroup.imgdest = ExclusionGroup.belongsTo(Image, {
   onDelete: "CASCADE",
 });
 
-ImageGroup.image = ImageGroup.belongsTo(Image, {
-  as: "image",
-  foreignKey: { allowNull: false, field: "image" },
-  onDelete: "CASCADE",
-});
-
-ImageGroup.group = ImageGroup.belongsTo(Group, {
-  as: "group",
-  foreignKey: { allowNull: false, field: "group" },
-  onDelete: "CASCADE",
-});
+Group.belongsToMany(Image, { through: ImageGroup, onDelete: "CASCADE" });
+Image.belongsToMany(Group, { through: ImageGroup, onDelete: "CASCADE" });
 
 Image.Layer = Image.belongsTo(Layer, {
   as: "layer",
@@ -176,4 +167,12 @@ ImageAttribute.Image = ImageAttribute.belongsTo(Image, {
 });
 Image.attributes = Image.hasOne(ImageAttribute);
 
-module.exports = { db: sequelize, Image: Image, ImageAttribute: ImageAttribute, Layer: Layer };
+module.exports = {
+  db: sequelize,
+  Image: Image,
+  ImageAttribute: ImageAttribute,
+  ImageGroup: ImageGroup,
+  Group: Group,
+  Layer: Layer,
+  ExclusionGroup: ExclusionGroup,
+};
