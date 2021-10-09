@@ -24,17 +24,17 @@ backend.all("/api/*", function (req, res) {
   );
 });
 
-const { db } = require("./../models/dbmodels");
+const { mongoose, connect } = require("../database/db");
 
 async function StartServer() {
   try {
-    await db.sync();
-
-    process.on("exit", () => {
-      db.close();
+    await connect();
+    process.on("exit", async () => {
+      await mongoose.disconnect();
     });
   } catch (err) {
-    console.log("Could not create database");
+    console.log(err.toString());
+    console.log("Could not connect to database");
     process.exit(1);
   }
   const server = http.createServer(backend);

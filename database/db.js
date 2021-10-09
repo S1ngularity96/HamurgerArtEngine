@@ -1,16 +1,15 @@
-const { Sequelize } = require("sequelize");
 const config = require("../config");
 const path = require("path");
 
-const storage =
-  process.env.MODE === "production"
-    ? path.join(config.env.PROJECT_DIR, "database.sdb")
-    : ":memory:";
+const mongoose = require("mongoose");
 
-const sequelize = new Sequelize({
-  dialect: "sqlite",
-  storage: storage,
-  logging: false,
-});
+async function connect() {
+  await mongoose.connect("mongodb://localhost:27017", {
+    user: "root",
+    pass: "3ei0kiMxfYnXtWlec6Ok",
+    autoCreate: true,
+    dbName: "wickedmolly"
+  });
+}
 
-module.exports = sequelize;
+module.exports = { mongoose, connect };

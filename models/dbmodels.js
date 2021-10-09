@@ -1,178 +1,46 @@
-const { DataTypes, Model } = require("sequelize");
-const sequelize = require("../database/db");
-class Project extends Model {}
-class Layer extends Model {}
-class Image extends Model {}
-class ImageAttribute extends Model {}
-class Group extends Model {}
-class ImageGroup extends Model {}
-class ExclusionGroup extends Model {}
+const { mongoose } = require("../database/db");
 
-Project.init(
-  {
-    id: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true,
-    },
-    name: {
-      type: DataTypes.STRING,
-      unique: true,
-    },
-    active: {
-      type: DataTypes.BOOLEAN,
-    },
-  },
-  {
-    sequelize,
-    modelName: "project",
-  }
-);
+const Types = mongoose.Schema.Types;
+const Schema = mongoose.Schema;
+const model = mongoose.model;
 
-ExclusionGroup.init(
-  {
-    id: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true,
-    },
-  },
-  {
-    sequelize,
-    modelName: "exclusiongroup",
-  }
-);
-
-Group.init(
-  {
-    id: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true,
-    },
-    name: {
-      type: DataTypes.STRING,
-      unique: { msg: "Group with this name exists" },
-      allowNull: false,
-    },
-    exclusive: {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-    },
-  },
-  {
-    sequelize,
-    modelName: "group",
-  }
-);
-
-ImageGroup.init(
-  {
-    id: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true,
-    },
-  },
-  {
-    sequelize,
-    modelName: "imagegroup",
-  }
-);
-
-Layer.init(
-  {
-    id: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true,
-    },
-    name: {
-      type: DataTypes.STRING,
-      allowNull: false,
-    },
-    layerorder: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-    },
-  },
-  {
-    sequelize,
-    modelName: "layer",
-  }
-);
-
-Image.init(
-  {
-    id: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true,
-    },
-    hash: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      unique: true,
-    },
-    name: {
-      type: DataTypes.STRING,
-      allowNull: false,
-    },
-    filepath: {
-      type: DataTypes.STRING,
-      allowNull: false,
-    },
-  },
-  { sequelize, modelName: "image" }
-);
-
-ImageAttribute.init(
-  {
-    id: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true,
-    },
-    rarity: {
-      type: DataTypes.REAL,
-    },
-  },
-  { sequelize, modelName: "attributes" }
-);
-
-ExclusionGroup.imgsource = ExclusionGroup.belongsTo(Image, {
-  as: "imgsource",
-  foreignKey: { allowNull: false, field: "imgdest" },
-  onDelete: "CASCADE",
+const Project = new Schema({
+  name: { type: Types.String, required: true },
+  active: { type: Types.Boolean, required: true },
 });
 
-ExclusionGroup.imgdest = ExclusionGroup.belongsTo(Image, {
-  as: "imgdest",
-  foreignKey: { allowNull: false, field: "imgdest" },
-  onDelete: "CASCADE",
+const Image = new Schema({
+  hash: { type: Types.String, unique: true, required: true },
+  name: { type: Types.String, required: true, unique: true },
+  filepath: { type: Types.String, unique: true, required: true },
+  conflicts: [{ type: Types.ObjectId, ref: "image" }],
+  layer: { type: Types.ObjectId, ref: "layer", required: true },
 });
 
-Group.belongsToMany(Image, { through: ImageGroup, onDelete: "CASCADE" });
-Image.belongsToMany(Group, { through: ImageGroup, onDelete: "CASCADE" });
-
-Image.Layer = Image.belongsTo(Layer, {
-  as: "layer",
-  foreignKey: { allowNull: false, field: "layer" },
+const ImageGroup = new Schema({
+  name: { type: Types.String, required: true },
+  exclusive: { type: Types.Boolean, default: false },
+  images: [{ type: Types.ObjectId, ref: "image" }],
 });
-Layer.Images = Layer.hasMany(Image);
 
-ImageAttribute.Image = ImageAttribute.belongsTo(Image, {
-  as: "image",
-  foreignKey: { allowNull: false, field: "image" },
+const Layer = new Schema({
+  name: { type: Types.String, required: true },
+  order: { type: Types.Number, unique: true },
+  images: [{ type: Types.ObjectId, ref: "image" }],
 });
-Image.attributes = Image.hasOne(ImageAttribute);
+
+const ProjectModel = model("project", Project);
+const LayerModel = model("layer", Layer);
+const ImageGroupModel = model("imagegroup", ImageGroup);
+const ImageModel = model("image", Image);
+
+Image.pre("remove", async function (done) {
+  done();
+});
 
 module.exports = {
-  db: sequelize,
-  Image: Image,
-  ImageAttribute: ImageAttribute,
-  ImageGroup: ImageGroup,
-  Group: Group,
-  Layer: Layer,
-  ExclusionGroup: ExclusionGroup,
+  Project: ProjectModel,
+  Layer: LayerModel,
+  ImageGroup: ImageGroupModel,
+  Image: ImageModel,
 };

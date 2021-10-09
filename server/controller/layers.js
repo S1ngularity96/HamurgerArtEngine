@@ -1,15 +1,12 @@
 const api = require("../helper/api");
-const { Layer, Image, ImageAttribute, ImageGroup, Group } = require("../../models/dbmodels");
+const { Layer, Image, ImageGroup } = require("../../models/dbmodels");
 const { layersDir } = require("../../config");
 const { getIndex } = require("../helper/fsHelper");
 const { groupConstraints, flatValidate } = require("../helper/validate");
 
 async function getLayers(req, res) {
   try {
-    let layers = await Layer.findAll({ raw: true });
-    for (let layer = 0; layer < layers.length; layer++) {
-      layers[layer].size = await Image.count({ where: { layerId: layers[layer].id } });
-    }
+    let layers = await Layer.find({});
     api.successResponseWithData(res, "OK", layers);
   } catch (err) {
     api.ErrorResponse(res, err.toString());
@@ -18,9 +15,7 @@ async function getLayers(req, res) {
 
 async function getImages(req, res) {
   try {
-    let images = await Image.findAll({
-      include: { model: Layer, as: "layer", attributes: ["name"] },
-    });
+    let images = await Image.find({}).populate({ path: "layer", select: "_id, name" });
     api.successResponseWithData(res, "OK", images);
   } catch (err) {
     api.ErrorResponse(res, err.toString());
@@ -32,10 +27,9 @@ async function patchLayers(req, res, next) {
   try {
     if (layers) {
       for (let layer = 0; layer < layers.length; layer++) {
-        await Layer.update(
-          { layerorder: layers[layer].layerorder },
-          { where: { id: layers[layer].id } }
-        );
+        let dbLayer = await Layer.findById(layers[layer].id);
+        dbLayer.order = layers[layer].order;
+        dbLayer.update();
       }
       next();
       return;
@@ -50,20 +44,28 @@ async function patchLayers(req, res, next) {
 async function getLayersReload(req, res) {
   try {
     let layers = getIndex(layersDir);
-    await Image.destroy({ where: {} });
-    await Layer.destroy({ where: {} });
-    await ImageAttribute.destroy({ where: {} });
-    layers.forEach(async (layer) => {
-      let createdLayer = await Layer.create({ name: layer.name });
-      layer.files.forEach(async (file) => {
-        await Image.create({
-          name: file.name,
-          filepath: file.filepath,
-          hash: file.hash,
-          layerId: createdLayer.id,
+
+    await Image.deleteMany({});
+    await Layer.deleteMany({});
+    await ImageGroup.deleteMany({});
+
+    for (let it = 1; it <= layers.length; it++) {
+      let layer = layers[it - 1];
+      let files = layer.files;
+      let nLayer = new Layer({ name: layer.name, order: it });
+      for (let file = 0; file < files.length; file++) {
+        let nImage = await new Image({
+          hash: files[file].hash,
+          name: files[file].name,
+          filepath: files[file].filepath,
+          conflicts: [],
+          layer: nLayer._id,
         });
-      });
-    });
+        nLayer.images.push(nImage._id);
+        await nImage.save();
+      }
+      await nLayer.save();
+    }
     api.successResponse(res, "Fileindex reloaded successfully");
   } catch (err) {
     api.ErrorResponse(res, err.toString());
@@ -73,9 +75,9 @@ async function getLayersReload(req, res) {
 async function getLayer(req, res) {
   let id = req.params.id;
   if (id) {
-    let layer = await Layer.findOne({
-      where: { id: id },
-      include: [{ model: Image, as: "images" }],
+    let layer = await Layer.findById(id).populate({
+      path: "images",
+      populate: { path: "layer", select: "_id, name" },
     });
     api.successResponseWithData(res, "OK", layer);
   } else {
@@ -84,43 +86,41 @@ async function getLayer(req, res) {
 }
 
 async function getTraitAttributes(req, res) {
-  let hash = req.params.hash;
+  let id = req.params.id;
   let layer = req.params.name;
-  if (hash && layer) {
+  if (id && layer) {
     try {
-      let image = await Image.findOne({ where: { hash: hash }, raw: true });
-      let attributes = await ImageAttribute.findOne({ where: { imageId: image.id }, raw: true });
-      image.attributes = attributes;
+      let image = await Image.findById(id)
+        .populate("conflicts")
+        .populate({ path: "layer", select: "_id, name" });
       api.successResponseWithData(res, "OK", image);
     } catch (err) {}
   } else {
-    api.BadRequestResponse(res, "Layer of identifier of file missing");
+    api.BadRequestResponse(res, "ID of layer of file missing");
   }
 }
 
-async function postTraitAttributes(req, res) {
-  let hash = req.params.hash;
+async function postTraitAttributes(req, res, next) {
+  let imageId = req.params.id;
   let layer = req.params.name;
-  if (hash && layer) {
-    let image = await Image.findOne({ where: { hash: hash }, raw: true });
-    let attributes = await ImageAttribute.findOne({ where: { imageId: image.id } });
-    attributes.update(req.body.attributes);
-    api.successResponse(res, "OK");
+  let attributes = req.body;
+  if (imageId && layer && attributes) {
+    let conflicts = attributes.conflicts.map((conflict) => {
+      return conflict._id;
+    });
+    let update = { conflicts: conflicts };
+    await Image.findOneAndUpdate({ _id: imageId }, update);
+    next();
   } else {
     api.BadRequestResponse(res, "Layer of identifier of file missing");
   }
 }
 
+// everything about groups
+
 async function getGroups(req, res) {
   try {
-    let groups = await Group.findAll({
-      include: {
-        model: Image,
-        through: ImageGroup,
-        as: "images",
-        include: { model: Layer, attributes: ["name"], as: "layer" },
-      },
-    });
+    let groups = await ImageGroup.find({}).populate("images");
     api.successResponseWithData(res, "OK", groups);
   } catch (err) {
     api.ErrorResponse(res, err.toString());
@@ -130,13 +130,9 @@ async function getGroups(req, res) {
 async function getGroup(req, res) {
   try {
     let groupId = req.params.id;
-    let group = await Group.findOne({
-      where: { id: groupId },
-      include: {
-        model: Image,
-        through: ImageGroup,
-        include: { model: Layer, as: "layer", attributes: ["name"] },
-      },
+    let group = await ImageGroup.findById(groupId).populate({
+      path: "images",
+      populate: { path: "layer", select: "_id, name" },
     });
     api.successResponseWithData(res, "OK", group);
   } catch (err) {
@@ -152,16 +148,15 @@ async function patchGroup(req, res, next) {
   }
 
   if (groupId) {
-    let images = req.body.images;
     try {
-      await ImageGroup.destroy({ where: { groupId: groupId } });
-      for (let image = 0; image < images.length; image++) {
-        await ImageGroup.create({ imageId: images[image].id, groupId: groupId });
+      let images = req.body.images;
+      if (images) {
+        images = images.map((image) => {
+          return image._id;
+        });
       }
-      await Group.update(
-        { name: req.body.name, exclusive: req.body.exclusive },
-        { where: { id: groupId } }
-      );
+      let update = { name: req.body.name, exclusive: req.body.exclusive, images: images };
+      await ImageGroup.findOneAndUpdate({ _id: req.params.id }, update);
       next();
     } catch (err) {
       api.ErrorResponse(res, err.toString());
@@ -178,7 +173,8 @@ async function postGroup(req, res, next) {
     return;
   }
   try {
-    await Group.create({ name: req.body.name, exclusive: req.body.exclusive });
+    let group = new ImageGroup({ name: req.body.name, exclusive: req.body.exclusive, images: [] });
+    await group.save();
     next();
   } catch (err) {
     api.ErrorResponse(res, err.toString());
@@ -187,10 +183,9 @@ async function postGroup(req, res, next) {
 
 async function deleteGroup(req, res, next) {
   let groupid = req.params.id;
-
   if (groupid) {
     try {
-      await Group.destroy({ where: { id: groupid } });
+      await ImageGroup.deleteOne({ id: groupid });
       next();
     } catch (err) {
       api.ErrorResponse(res, err.toString());
@@ -199,8 +194,6 @@ async function deleteGroup(req, res, next) {
     api.BadRequestResponse(res, "No group id was given");
   }
 }
-
-async function postExclusionSet(req, res) {}
 
 module.exports = {
   getLayer,
