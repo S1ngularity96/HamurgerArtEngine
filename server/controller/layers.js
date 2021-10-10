@@ -22,22 +22,84 @@ async function getImages(req, res) {
   }
 }
 
+async function getGroupImages(req, res) {
+  let groupId = req.params.id;
+
+  try {
+    //filter all exclusive images
+    let exclusiveIds = new Set();
+    let selectedInGroup = new Set();
+    let groups = await ImageGroup.find({ exclusive: true }).populate({
+      path: "images",
+      select: "_id",
+    });
+
+    for (let g = 0; g < groups.length; g++) {
+      for (let i = 0; i < groups[g].images.length; i++) {
+        let id = groups[g].images[i]._id.toString();
+        exclusiveIds.add(id);
+      }
+    }
+
+    //Get Images that already are in group
+    let selectedGroup = await ImageGroup.findOne({ _id: groupId })
+      .populate({
+        path: "images",
+        select: "_id",
+      })
+      .select("_id");
+    for (let i = 0; i < selectedGroup.images.length; i++) {
+      let id = selectedGroup.images[i]._id.toString();
+      selectedInGroup.add(id);
+    }
+
+    //get all images
+    let allImages = await Image.find({}).populate({
+      path: "layer",
+      select: "_id, name",
+    });
+
+    selectedInGroup.forEach((selected) => {
+      if (exclusiveIds.has(selected)) {
+        exclusiveIds.delete(selected);
+      }
+    });
+
+    allImages = allImages.filter((image) => {
+      return exclusiveIds.has(image._id.toString()) ? false : true;
+    });
+
+    api.successResponseWithData(res, "OK", allImages);
+  } catch (err) {
+    api.ErrorResponse(res, err.toString());
+  }
+}
+
 async function patchLayers(req, res, next) {
   let layers = req.body.layers;
   try {
     if (layers) {
+      let set = new Set();
       for (let layer = 0; layer < layers.length; layer++) {
-        let dbLayer = await Layer.findById(layers[layer].id);
-        dbLayer.order = layers[layer].order;
-        dbLayer.update();
+        let order = layers[layer].order;
+        if (!set.has(order)) {
+          set.add(order);
+        } else {
+          api.BadRequestResponse(res, `Ordervalue ${order} is a duplicate`);
+          return;
+        }
+      }
+
+      for (let layer = 0; layer < layers.length; layer++) {
+        let update = { order: layers[layer].order };
+        await Layer.findByIdAndUpdate(layers[layer]._id, update);
       }
       next();
-      return;
     } else {
       api.BadRequestResponse(res, "Layers missing!");
     }
   } catch (err) {
-    api.ErrorResponse(res, err.toString());
+    api.ErrorResponse(res, err.data.msg);
   }
 }
 
@@ -120,7 +182,10 @@ async function postTraitAttributes(req, res, next) {
 
 async function getGroups(req, res) {
   try {
-    let groups = await ImageGroup.find({}).populate("images");
+    let groups = await ImageGroup.find({}).populate({
+      path: "images",
+      populate: { path: "layer", select: "_id, name" },
+    });
     api.successResponseWithData(res, "OK", groups);
   } catch (err) {
     api.ErrorResponse(res, err.toString());
@@ -142,19 +207,43 @@ async function getGroup(req, res) {
 
 async function patchGroup(req, res, next) {
   let groupId = req.params.id;
+  let imagesInGroups = new Set();
   let validate = flatValidate(req.body, groupConstraints);
   if (validate) {
     api.BadRequestResponse(res, validate);
   }
 
+  let groups = await ImageGroup.find({ exclusive: false }).populate({
+    path: "images",
+    select: "_id",
+  });
+
+  for (let g = 0; g < groups.length; g++) {
+    for (let i = 0; i < groups[g].images.length; i++) {
+      let id = groups[g].images[i]._id.toString();
+      imagesInGroups.add(id);
+    }
+  }
+
   if (groupId) {
     try {
       let images = req.body.images;
+      if (req.body.exclusive) {
+        for(let image = 0; image < images.length; image++){
+          
+          if (imagesInGroups.has(images[image]._id)) {
+            api.BadRequestResponse(res, `Image ${images[image].name} is already used in other group`);
+            return;
+          }
+        }
+      }
+
       if (images) {
         images = images.map((image) => {
           return image._id;
         });
       }
+
       let update = { name: req.body.name, exclusive: req.body.exclusive, images: images };
       await ImageGroup.findOneAndUpdate({ _id: req.params.id }, update);
       next();
@@ -205,6 +294,7 @@ module.exports = {
   postTraitAttributes,
   getGroup,
   getGroups,
+  getGroupImages,
   postGroup,
   deleteGroup,
   patchGroup,
