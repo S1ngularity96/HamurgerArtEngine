@@ -127,7 +127,7 @@ describe("Increment", () => {
     let testcase = {
       input: {
         layer: [
-          { name: "layer 1", images: [1, 1], order: 0 },
+          { name: "layer 1", images: [1, 2], order: 0 },
           { name: "layer 2", images: [1, 2], order: 1 },
           { name: "layer 3", images: [1, 2, 3, 4, 5, 6, 7, 8], order: 2 },
           { name: "layer 4", images: [1, 2, 3, 4, 5, 6], order: 3 },
