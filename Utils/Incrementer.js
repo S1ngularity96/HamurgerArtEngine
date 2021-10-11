@@ -1,6 +1,7 @@
 /*
     [{max_val:3, value: 0}, {max_val:10, value: 7}, {max_val:22, value: 8}]
 */
+const EventEmitter = require('events')
 
 class LayerIncrementer {
   /**
@@ -9,6 +10,7 @@ class LayerIncrementer {
    *
    */
   constructor() {
+    this.events = new EventEmitter();
     this.options = { backwards: false };
     this.magicNumber = [];
     this.size = 0;
@@ -35,7 +37,6 @@ class LayerIncrementer {
   }
 
   rollover(atIndex, minMaxIndex, options) {
-    let rolloveragain = false;
     switch (this.options.backwards) {
       case true:
         for (let index = atIndex; index >= minMaxIndex; index--) {
