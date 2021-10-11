@@ -7,7 +7,9 @@ class Graph {
     if (this.nodes.has(id)) {
       throw new Error(`$Node with ID ${node.id} exists.`);
     } else {
-      this.nodes.set(id, new Node(id, name));
+      let node = new Node(id, name);
+      this.nodes.set(id, node);
+      return node;
     }
   }
 
@@ -17,7 +19,7 @@ class Graph {
     } else {
       let node = new Node(id, name);
       this.nodes.set(id, node);
-      return node;
+      return this.nodes.get(id);
     }
   }
 
@@ -46,4 +48,4 @@ class Node {
   }
 }
 
-module.exports = { Graph, Node, Edge };
+module.exports = { Graph, Node };
