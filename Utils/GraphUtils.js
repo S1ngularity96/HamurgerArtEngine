@@ -1,4 +1,4 @@
-const { Graph, Node, Edge } = require("./Graph");
+const { Graph, Node } = require("./Graph");
 
 /**
  *
@@ -10,7 +10,7 @@ function PairExists(g, nodeid) {
     if (node.marked) return true;
     node.marked = true;
     node.edges.forEach((value) => {
-      if (g.nodes.has(value) && value !== node.id) {
+      if (g.nodes.has(value)) {
         let target_node = g.nodes.get(value);
         if (target_node.marked) return true;
         else target_node.marked = true;
@@ -26,17 +26,17 @@ function PairExists(g, nodeid) {
  */
 function CreateConflictGraph(images) {
   let g = new Graph();
-  images.forEach((image) => {
-    let node = new Node(image._id, image._name);
-    g.nodes.set(images._id, node);
+  images.forEach(function (image) {
+    let node = g.addNode(image._id, image.name);
     if (image.conflicts) {
-      image.conflicts.forEach((conflict) => {
+      image.conflicts.forEach(function (conflict) {
         node.addEdge(conflict._id);
         let target = g.findNodeOrCreate(conflict._id, conflict.name);
-        target.addEdge(node._id);
+        target.addEdge(node.id);
       });
     }
   });
+  return g;
 }
 /**
  * @param {Graph} g
