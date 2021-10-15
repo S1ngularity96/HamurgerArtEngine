@@ -99,7 +99,7 @@ async function patchLayers(req, res, next) {
       api.BadRequestResponse(res, "Layers missing!");
     }
   } catch (err) {
-    api.ErrorResponse(res, err.data.msg);
+    api.ErrorResponse(res, err.toString());
   }
 }
 
@@ -229,10 +229,12 @@ async function patchGroup(req, res, next) {
     try {
       let images = req.body.images;
       if (req.body.exclusive) {
-        for(let image = 0; image < images.length; image++){
-          
+        for (let image = 0; image < images.length; image++) {
           if (imagesInGroups.has(images[image]._id)) {
-            api.BadRequestResponse(res, `Image ${images[image].name} is already used in other group`);
+            api.BadRequestResponse(
+              res,
+              `Image ${images[image].name} is already used in other group`
+            );
             return;
           }
         }

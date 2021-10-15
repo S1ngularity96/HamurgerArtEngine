@@ -1,7 +1,7 @@
 /*
     [{max_val:3, value: 0}, {max_val:10, value: 7}, {max_val:22, value: 8}]
 */
-const EventEmitter = require('events')
+const EventEmitter = require("events");
 
 class LayerIncrementer {
   /**
@@ -31,7 +31,10 @@ class LayerIncrementer {
     });
     this.size = tmpLayers.length;
     for (let layer = 0; layer < tmpLayers.length; layer++) {
-      this.magicNumber.push({ max_val: tmpLayers[layer].images.length - 1, value: 0 });
+      this.magicNumber.push({
+        max_val: tmpLayers[layer].images.length - 1,
+        value: 0,
+      });
     }
     return { overflow: false, number: [...this.magicNumber] };
   }

@@ -27,11 +27,11 @@ function PairExists(g, nodeid) {
 function CreateConflictGraph(images) {
   let g = new Graph();
   images.forEach(function (image) {
-    let node = g.addNode(image._id, image.name);
+    let node = g.addNode(image._id.toString(), image.name);
     if (image.conflicts) {
       image.conflicts.forEach(function (conflict) {
-        node.addEdge(conflict._id);
-        let target = g.findNodeOrCreate(conflict._id, conflict.name);
+        node.addEdge(conflict._id.toString());
+        let target = g.findNodeOrCreate(conflict._id.toString(), conflict.name);
         target.addEdge(node.id);
       });
     }

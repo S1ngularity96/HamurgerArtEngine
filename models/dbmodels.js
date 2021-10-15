@@ -25,7 +25,7 @@ const ImageGroup = new Schema({
 
 const Layer = new Schema({
   name: { type: Types.String, required: true },
-  order: { type: Types.Number, unique: true },
+  order: { type: Types.Number },
   images: [{ type: Types.ObjectId, ref: "image" }],
 });
 
