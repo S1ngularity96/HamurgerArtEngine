@@ -1,4 +1,4 @@
-function generateShuffledSequene(start, end) {
+function generateShuffledSequence(start, end) {
   let set = new Set();
   let sequence = [];
   if (start < end && start >= 0) {
@@ -15,3 +15,5 @@ function generateShuffledSequene(start, end) {
   }
   return sequence;
 }
+
+module.exports = { generateShuffledSequence };

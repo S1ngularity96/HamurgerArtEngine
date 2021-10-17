@@ -3,7 +3,7 @@ const Minter = require("../../Utils/Minter");
 const { layersDir } = require("../../config");
 const { Layer, ImageGroup } = require("../../models/dbmodels");
 const { GeneratedImage } = require("../../models/dbmodels");
-
+const { generateShuffledSequence } = require("../../Utils/Shuffle");
 async function getFilters(req, res) {
   try {
     let layers = await Layer.find({})
@@ -22,6 +22,7 @@ async function getMintedImages(req, res) {
     let query = filters.length > 0 ? { images: { $in: filters } } : {};
 
     let minted = await GeneratedImage.find(query)
+      .sort({ order: "asc" })
       .select("_id, filepath")
       .skip(10 * skip)
       .limit(10);
@@ -29,6 +30,21 @@ async function getMintedImages(req, res) {
     api.successResponseWithData(res, "OK", { count: totalNumber, items: minted });
   } catch (err) {
     console.log(err);
+    api.ErrorResponse(res, err.toString());
+  }
+}
+
+async function getShuffle(req, res, next) {
+  try {
+    let minted = await GeneratedImage.find({});
+    let totalNumber = minted.length;
+    let sequence = generateShuffledSequence(0, totalNumber);
+    for (let image = 0; image < totalNumber; image++) {
+      await GeneratedImage.findByIdAndUpdate(minted[image]._id, { order: sequence[image] });
+    }
+    next();
+    return;
+  } catch (err) {
     api.ErrorResponse(res, err.toString());
   }
 }
@@ -70,4 +86,5 @@ module.exports = {
   getNext,
   getFilters,
   getMintedImages,
+  getShuffle,
 };
