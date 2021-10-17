@@ -1,6 +1,8 @@
 const router = require("express").Router();
 const minterController = require("../controller/minter");
 
-router.post("/init", minterController.postInitMinter);
+router.post("/init", minterController.postInitMinter, minterController.getMintedImages);
+router.post("/images/:skip", minterController.getMintedImages);
 router.get("/next", minterController.getNext);
+router.get("/filters", minterController.getFilters);
 module.exports = router;

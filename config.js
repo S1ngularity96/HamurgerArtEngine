@@ -18,6 +18,7 @@ const layersOrder = [
 
 const buildDir = path.join(env.PROJECT_DIR, "build");
 const layersDir = path.join(env.PROJECT_DIR, "Layers");
+const imagesDir = path.join(env.PROJECT_DIR, "server", "public", "generated")
 
 const format = {
   width: 2000,
@@ -31,4 +32,5 @@ module.exports = {
   format,
   buildDir,
   layersDir,
+  imagesDir
 };

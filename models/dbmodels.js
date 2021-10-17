@@ -29,10 +29,17 @@ const Layer = new Schema({
   images: [{ type: Types.ObjectId, ref: "image" }],
 });
 
+const GeneratedImage = new Schema({
+  order: { type: Types.Number, required: true },
+  images: [{ type: Types.ObjectId, ref: "image" }],
+  filepath: { type: Types.String, required: true },
+});
+
 const ProjectModel = model("project", Project);
 const LayerModel = model("layer", Layer);
 const ImageGroupModel = model("imagegroup", ImageGroup);
 const ImageModel = model("image", Image);
+const GeneratedImageModel = model("generated", GeneratedImage);
 
 Image.pre("remove", async function (done) {
   done();
@@ -43,4 +50,5 @@ module.exports = {
   Layer: LayerModel,
   ImageGroup: ImageGroupModel,
   Image: ImageModel,
+  GeneratedImage: GeneratedImageModel,
 };

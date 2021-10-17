@@ -1,6 +1,11 @@
 const LayerIncrementer = require("./Incrementer");
 const GraphUtils = require("./GraphUtils");
-const { Graph } = require("./Graph");
+const { imagesDir, layersDir } = require("../config");
+const mergeImages = require("merge-images");
+const { Canvas, Image } = require("canvas");
+const { GeneratedImage } = require("../models/dbmodels");
+const SocketIO = require("../server/websocket/sock");
+const fs = require("fs");
 
 class Minter {
   constructor() {
@@ -20,7 +25,7 @@ class Minter {
       return a.order - b.order;
     });
     this.incrementer = new LayerIncrementer();
-    let result = this.incrementer.init(this.layers, { backwards: true });
+    this.incrementer.init(this.layers, { backwards: true });
     const images = this.layers.reduce((prev, current) => {
       return prev.concat(current.images);
     }, []);
@@ -30,8 +35,6 @@ class Minter {
     }
 
     this.conflictgraph = GraphUtils.CreateConflictGraph(images);
-    this.updateCurrent(result.number);
-    return this.checkConflict(result.number);
   }
 
   checkConflict(number) {
@@ -49,6 +52,17 @@ class Minter {
     return { conflicts: false, number };
   }
 
+  async saveMinted(index, images) {
+    let sources = images.map((image) => {
+      return `${layersDir}/${image.filepath}`;
+    });
+    let baseImage = await mergeImages(sources, { Canvas: Canvas, Image: Image });
+    let base64Data = baseImage.replace(/^data:image\/png;base64,/, "");
+    let filepath = `${imagesDir}/${index}-minted.png`;
+    fs.writeFileSync(filepath, base64Data, "base64");
+    return { absolute: filepath, relative: `/generated/${index}-minted.png` };
+  }
+
   updateCurrent(number) {
     let images = this.imagesMap;
     let layers = this.layers;
@@ -57,12 +71,33 @@ class Minter {
     });
   }
 
+  async createImages(limit) {
+    let imagesCreated = 0;
+    let overflow = false;
+    let sockio = new SocketIO();
+    while (imagesCreated != limit && !overflow) {
+      let res = this.next();
+      overflow = res.overflow;
+      if (res.conflicts === false) {
+        this.updateCurrent(res.number);
+        let { absolute, relative } = await this.saveMinted(imagesCreated, this.current);
+        await GeneratedImage.create({
+          order: imagesCreated,
+          images: this.current,
+          filepath: relative,
+        });
+        imagesCreated++;
+        sockio.emit("/mint/status", { running: true, created: imagesCreated, of: limit });
+      }
+    }
+    sockio.emit("/mint/status", { running: false, created: imagesCreated, of: limit });
+  }
+
   next() {
     if (this.incrementer !== null) {
-      let result = this.incrementer.increment();
+      let result = this.current === null ? this.incrementer.reset() : this.incrementer.increment();
       let check = this.checkConflict(result.number);
-      this.updateCurrent(result.number);
-      return { overflow: result.overflow, conflict: check.conflicts, number: result.number };
+      return { overflow: result.overflow, conflicts: check.conflicts, number: result.number };
     }
     return null;
   }

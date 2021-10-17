@@ -106,6 +106,7 @@ class LayerIncrementer {
       number.value = 0;
       return number;
     });
+    return { overflow: false, number: [...this.magicNumber] };
   }
 }
 
