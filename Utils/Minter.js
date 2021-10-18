@@ -15,6 +15,7 @@ class Minter {
       this.conflictgraph = null;
       this.layers = null;
       this.imagesMap = null;
+      this.running = false;
       Minter.instance = this;
     }
     return Minter.instance;
@@ -71,11 +72,18 @@ class Minter {
     });
   }
 
-  async createImages(limit) {
-    let imagesCreated = 0;
+  /**
+   *
+   * @param {Number} limit Set the limit for the number of images
+   * @param {Number} optImagesCreated Set imagesCreated-value by this parameter
+   * @returns
+   */
+  async createImages(limit, optImagesCreated) {
+    let imagesCreated = optImagesCreated ? optImagesCreated : 0;
     let overflow = false;
     let sockio = new SocketIO();
-    while (imagesCreated != limit && !overflow) {
+    this.running = true;
+    while (imagesCreated != limit && !overflow && this.running) {
       let res = this.next();
       overflow = res.overflow;
       if (res.conflicts === false) {
@@ -91,6 +99,11 @@ class Minter {
       }
     }
     sockio.emit("/mint/status", { running: false, created: imagesCreated, of: limit });
+    return imagesCreated;
+  }
+
+  async stopMinter() {
+    this.running = false;
   }
 
   next() {

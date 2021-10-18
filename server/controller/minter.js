@@ -49,20 +49,45 @@ async function getShuffle(req, res, next) {
   }
 }
 
+async function getStopMinter(req, res) {
+  try {
+    const minter = new Minter();
+    minter.stopMinter();
+    api.successResponse(res, "OK");
+  } catch (err) {
+    api.ErrorResponse(res, err.toString());
+  }
+}
+
+async function createLayersFromGroup() {
+  let layer = await find({});
+  layer = layer.map((layer) => {
+    return { _id: layer._id, name: layer.name, order: layer.order, images: [] };
+  });
+}
+
 async function postInitMinter(req, res, next) {
   let { all, groups, limit } = req.body.config;
   limit = limit > 0 ? limit : 10000;
   try {
-    await GeneratedImage.deleteMany({});
     if (all === true) {
+      await GeneratedImage.deleteMany({});
       let layer = await Layer.find({}).populate({ path: "images" });
       const minter = new Minter();
       minter.initialize(layer);
       await minter.createImages(limit);
       next();
       return;
+    } else {
+      //await GeneratedImage.deleteMany({});
+      let allgroups = await ImageGroup.find({ _id: groups }).populate({
+        path: "images",
+        select: "_id, name",
+        populate: { path: "layer", select: "_id, order" },
+      });
+
+      let layer = {};
     }
-    api.successResponse(res, "OK");
   } catch (err) {
     console.log(err);
     api.ErrorResponse(res, err.toString());
@@ -83,6 +108,7 @@ async function getNext(req, res) {
 
 module.exports = {
   postInitMinter,
+  getStopMinter,
   getNext,
   getFilters,
   getMintedImages,
