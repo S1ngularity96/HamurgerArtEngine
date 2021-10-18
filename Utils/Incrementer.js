@@ -32,7 +32,7 @@ class LayerIncrementer {
     this.size = tmpLayers.length;
     for (let layer = 0; layer < tmpLayers.length; layer++) {
       this.magicNumber.push({
-        max_val: tmpLayers[layer].images.length - 1,
+        max_val: tmpLayers[layer].images.length === 0 ? 0 : tmpLayers[layer].images.length - 1,
         value: 0,
       });
     }

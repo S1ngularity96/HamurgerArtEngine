@@ -40,13 +40,15 @@ class Minter {
 
   checkConflict(number) {
     for (let n = 0; n < number.length; n++) {
-      let result = GraphUtils.PairExists(
-        this.conflictgraph,
-        this.layers[n].images[number[n].value]._id.toString()
-      );
-      if (result === true) {
-        GraphUtils.UnmarkAllNodes(this.conflictgraph);
-        return { conflicts: true, number };
+      if (this.layers[n].images.length > 0) {
+        let result = GraphUtils.PairExists(
+          this.conflictgraph,
+          this.layers[n].images[number[n].value]._id.toString()
+        );
+        if (result === true) {
+          GraphUtils.UnmarkAllNodes(this.conflictgraph);
+          return { conflicts: true, number };
+        }
       }
     }
     GraphUtils.UnmarkAllNodes(this.conflictgraph);
@@ -67,9 +69,14 @@ class Minter {
   updateCurrent(number) {
     let images = this.imagesMap;
     let layers = this.layers;
-    this.current = number.map((num, index) => {
-      return images.get(layers[index].images[num.value]._id.toString());
-    });
+    this.current = number
+      .map((num, index) => {
+        if (layers[index].images.length > 0) {
+          return images.get(layers[index].images[num.value]._id.toString());
+        }
+        return null;
+      })
+      .filter((val) => val !== null);
   }
 
   /**
@@ -83,9 +90,10 @@ class Minter {
     let overflow = false;
     let sockio = new SocketIO();
     this.running = true;
-    while (imagesCreated != limit && !overflow && this.running) {
+    while (imagesCreated != limit && overflow === false && this.running) {
       let res = this.next();
       overflow = res.overflow;
+      
       if (res.conflicts === false) {
         this.updateCurrent(res.number);
         let { absolute, relative } = await this.saveMinted(imagesCreated, this.current);

@@ -59,11 +59,21 @@ async function getStopMinter(req, res) {
   }
 }
 
-async function createLayersFromGroup() {
-  let layer = await find({});
+async function createLayersFromGroup(group) {
+  let layer = await Layer.find({});
+  let layerRef = new Map();
   layer = layer.map((layer) => {
     return { _id: layer._id, name: layer.name, order: layer.order, images: [] };
   });
+  for (let le = 0; le < layer.length; le++) {
+    layerRef.set(layer[le]._id.toString(), layer[le]);
+  }
+  for (let img = 0; img < group.images.length; img++) {
+    if (layerRef.has(group.images[img].layer._id.toString())) {
+      layerRef.get(group.images[img].layer._id.toString()).images.push(group.images[img]);
+    }
+  }
+  return layer;
 }
 
 async function postInitMinter(req, res, next) {
@@ -74,19 +84,29 @@ async function postInitMinter(req, res, next) {
       await GeneratedImage.deleteMany({});
       let layer = await Layer.find({}).populate({ path: "images" });
       const minter = new Minter();
+      console.log(layer);
       minter.initialize(layer);
       await minter.createImages(limit);
       next();
       return;
     } else {
-      //await GeneratedImage.deleteMany({});
+      await GeneratedImage.deleteMany({});
       let allgroups = await ImageGroup.find({ _id: groups }).populate({
         path: "images",
-        select: "_id, name",
         populate: { path: "layer", select: "_id, order" },
       });
-
-      let layer = {};
+      let layerOfGroups = [];
+      for (let gr = 0; gr < allgroups.length; gr++) {
+        let layer = await createLayersFromGroup(allgroups[gr]);
+        layerOfGroups.push(layer);
+      }
+      let imagesCreated = 0;
+      const minter = new Minter();
+      for (let lgr = 0; lgr < layerOfGroups.length; lgr++) {
+        minter.initialize(layerOfGroups[lgr]);
+        imagesCreated = await minter.createImages(limit, imagesCreated);
+      }
+      next();
     }
   } catch (err) {
     console.log(err);
