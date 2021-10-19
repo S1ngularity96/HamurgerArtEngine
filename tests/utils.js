@@ -1,6 +1,8 @@
 const assert = require("assert");
 const LayerIncrementer = require("../Utils/Incrementer");
 const fs = require("fs");
+const { createLayersFromGroup } = require("../server/functions/models");
+
 describe("Increment", () => {
   it("Forward", () => {
     let testcase = {
@@ -161,5 +163,117 @@ describe("Increment", () => {
       stepsNeeded++;
     } while (!result.overflow);
     assert.deepStrictEqual(result, expected);
+  });
+});
+
+describe("Groups", () => {
+  it("Generate Layers from Groups", () => {
+    let layer = [
+      { _id: "616c7f884e679595c8b1b18c", name: "Background", order: 1 },
+      { _id: "616c7f884e679595c8b1b180", name: "Accessory", order: 2 },
+      { _id: "616c7f884e679595c8b1b19a", name: "Base", order: 3 },
+      { _id: "616c7f884e679595c8b1b19bc", name: "Custom", order: 4 },
+    ];
+    let groups = {
+      _id: "616caa12fdcc09a073ed2bcc",
+      name: "Teal Background",
+      exclusive: false,
+      images: [
+        {
+          _id: "616c7f884e679595c8b1b197",
+          hash: "0a61701928efa373d417adaf7f697c0b",
+          name: "Basic Teal.png",
+          filepath: "Background/Basic Teal.png",
+          conflicts: [],
+          layer: {
+            _id: "616c7f884e679595c8b1b18c",
+            name: "Background",
+          },
+        },
+        {
+          _id: "616c7f884e679595c8b1b185",
+          hash: "cdab2049346cb64256e2b64a454d47fc",
+          name: "Cyber.png",
+          filepath: "Accessory/Cyber.png",
+          conflicts: [],
+          layer: {
+            _id: "616c7f884e679595c8b1b180",
+            name: "Accessory",
+          },
+        },
+        {
+          _id: "616c7f884e679595c8b1b19b",
+          hash: "854d1b0477393b5b9e4deca143863b25",
+          name: "Base.png",
+          filepath: "Base/Base.png",
+          conflicts: [],
+          layer: {
+            _id: "616c7f884e679595c8b1b19a",
+            name: "Base",
+          },
+        },
+      ],
+    };
+
+    // Since the group does not have images associated with the layer Custom
+    // we expect that the layer wont appear in the array
+    expectedLayers = [
+      {
+        _id: "616c7f884e679595c8b1b18c",
+        name: "Background",
+        order: 1,
+        images: [
+          {
+            _id: "616c7f884e679595c8b1b197",
+            hash: "0a61701928efa373d417adaf7f697c0b",
+            name: "Basic Teal.png",
+            filepath: "Background/Basic Teal.png",
+            conflicts: [],
+            layer: {
+              _id: "616c7f884e679595c8b1b18c",
+              name: "Background",
+            },
+          },
+        ],
+      },
+      {
+        _id: "616c7f884e679595c8b1b180",
+        name: "Accessory",
+        order: 2,
+        images: [
+          {
+            _id: "616c7f884e679595c8b1b185",
+            hash: "cdab2049346cb64256e2b64a454d47fc",
+            name: "Cyber.png",
+            filepath: "Accessory/Cyber.png",
+            conflicts: [],
+            layer: {
+              _id: "616c7f884e679595c8b1b180",
+              name: "Accessory",
+            },
+          },
+        ],
+      },
+      {
+        _id: "616c7f884e679595c8b1b19a",
+        name: "Base",
+        order: 3,
+        images: [
+          {
+            _id: "616c7f884e679595c8b1b19b",
+            hash: "854d1b0477393b5b9e4deca143863b25",
+            name: "Base.png",
+            filepath: "Base/Base.png",
+            conflicts: [],
+            layer: {
+              _id: "616c7f884e679595c8b1b19a",
+              name: "Base",
+            },
+          },
+        ],
+      },
+    ];
+    let generatedLayer = createLayersFromGroup(layer, groups);
+    assert.deepStrictEqual(generatedLayer, expectedLayers);
   });
 });
