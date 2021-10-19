@@ -4,6 +4,7 @@ const { layersDir } = require("../../config");
 const { Layer, ImageGroup } = require("../../models/dbmodels");
 const { GeneratedImage } = require("../../models/dbmodels");
 const { generateShuffledSequence } = require("../../Utils/Shuffle");
+const { cloneDeep } = require("lodash/lang");
 async function getFilters(req, res) {
   try {
     let layers = await Layer.find({})
@@ -59,20 +60,26 @@ async function getStopMinter(req, res) {
   }
 }
 
-async function createLayersFromGroup(group) {
-  let layer = await Layer.find({});
-  let layerRef = new Map();
+async function createLayersFromGroup(layer, group) {
   layer = layer.map((layer) => {
     return { _id: layer._id, name: layer.name, order: layer.order, images: [] };
   });
-  for (let le = 0; le < layer.length; le++) {
-    layerRef.set(layer[le]._id.toString(), layer[le]);
-  }
-  for (let img = 0; img < group.images.length; img++) {
-    if (layerRef.has(group.images[img].layer._id.toString())) {
-      layerRef.get(group.images[img].layer._id.toString()).images.push(group.images[img]);
+  let layerRef = layer.reduce((layerMap, layer) => {
+    layerMap.set(layer._id.toString(), layer);
+    return layerMap;
+  }, new Map());
+
+  group.images.reduce((layerMap, image) => {
+    if (layerMap.has(image.layer._id.toString())) {
+      layerMap.get(image.layer._id.toString()).images.push(image);
     }
-  }
+    return layerMap;
+  }, layerRef);
+
+  layer = layer.filter((layer) => {
+    return layer.images.length > 0 ? true : false;
+  });
+
   return layer;
 }
 
@@ -95,11 +102,16 @@ async function postInitMinter(req, res, next) {
         path: "images",
         populate: { path: "layer", select: "_id, order" },
       });
+
+      let layer = await Layer.find({});
       let layerOfGroups = [];
-      for (let gr = 0; gr < allgroups.length; gr++) {
-        let layer = await createLayersFromGroup(allgroups[gr]);
-        layerOfGroups.push(layer);
+      for (let group = 0; group < allgroups.length; group++) {
+        //make deep clone to not fetch data from database again
+        let tmpLayers = cloneDeep(layer);
+        let layerGroup = await createLayersFromGroup(tmpLayers, allgroups[group]);
+        layerOfGroups.push(layerGroup);
       }
+
       let imagesCreated = 0;
       const minter = new Minter();
       for (let lgr = 0; lgr < layerOfGroups.length; lgr++) {
