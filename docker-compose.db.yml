@@ -1,4 +1,5 @@
 # Use root/example as user/password credentials
+# Use this compose file if only using database
 version: "3.1"
 
 services:
@@ -21,26 +22,5 @@ services:
       ME_CONFIG_MONGODB_ADMINUSERNAME: root
       ME_CONFIG_MONGODB_ADMINPASSWORD: 3ei0kiMxfYnXtWlec6Ok
       ME_CONFIG_MONGODB_URL: mongodb://root:3ei0kiMxfYnXtWlec6Ok@mongo:27017/
-
-  backend:
-    image: minter-backend
-    depends_on:
-      - mongo
-    build:
-      context: ./Backend
-      dockerfile: Dockerfile
-    ports:
-      - 8000:8000
-
-  frontend:
-    image: minter-frontend
-    depends_on:
-      - backend
-    build:
-      context: ./Frontend
-      dockerfile: Dockerfile
-    ports: 
-      - 8080:8080
-    
 
   
