@@ -28,7 +28,7 @@ services:
       - mongo
     build:
       context: ./Backend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.Dev
     ports:
       - 8000:8000
     volumes:
