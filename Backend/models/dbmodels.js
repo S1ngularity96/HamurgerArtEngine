@@ -11,7 +11,7 @@ const Project = new Schema({
 
 const Image = new Schema({
   hash: { type: Types.String, unique: true, required: true },
-  name: { type: Types.String, required: true, unique: true },
+  name: { type: Types.String, required: true, unique: false },
   filepath: { type: Types.String, unique: true, required: true },
   conflicts: [{ type: Types.ObjectId, ref: "image" }],
   layer: { type: Types.ObjectId, ref: "layer", required: true },
