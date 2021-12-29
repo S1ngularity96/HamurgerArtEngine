@@ -1,11 +1,14 @@
 const api = require("../helper/api");
 const Minter = require("../../Utils/Minter");
-const { layersDir } = require("../../config");
+const { layersDir, publicDir, imagesDir } = require("../../config");
 const { Layer, ImageGroup } = require("../../models/dbmodels");
 const { GeneratedImage } = require("../../models/dbmodels");
 const { generateShuffledSequence } = require("../../Utils/Shuffle");
 const { cloneDeep } = require("lodash/lang");
 const { createLayersFromGroup } = require("../functions/models");
+
+const fs = require("fs");
+const AdmZip = require("adm-zip");
 
 async function getFilters(req, res) {
   try {
@@ -117,6 +120,19 @@ async function getNext(req, res) {
   }
 }
 
+async function getDownload(req, res) {
+  const zipFile = `${publicDir}/minted.zip`;
+  try {
+    const zip = new AdmZip();
+    if (fs.existsSync(zipFile)) fs.unlinkSync(zipFile);
+    zip.addLocalFolder(imagesDir);
+    zip.writeZip(zipFile);
+    api.successDownload(res, zipFile);
+  } catch (err) {
+    api.ErrorResponse(res, "Could not create archive with files");
+  }
+}
+
 module.exports = {
   postInitMinter,
   getStopMinter,
@@ -124,4 +140,5 @@ module.exports = {
   getFilters,
   getMintedImages,
   getShuffle,
+  getDownload,
 };

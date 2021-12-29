@@ -86,3 +86,8 @@ exports.ErrorResponseWithData = function (res, msg, data) {
 	};
 	return res.status(500).json(resData);
 };
+
+
+exports.successDownload = function (res, filepath) {
+	return res.status(200).download(filepath);
+}

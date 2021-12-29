@@ -13,7 +13,7 @@ backend.use(express.json());
 backend.use(express.urlencoded({ extended: true }));
 const apiResponse = require("./helper/api");
 const router = require("./router/api");
-const { env, imagesDir } = require("../config");
+const { env, imagesDir, publicDir } = require("../config");
 
 //custom static
 backend.use("/static/layers", express.static(path.join(env.PROJECT_DIR, "Layers")));
