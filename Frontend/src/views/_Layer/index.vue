@@ -71,11 +71,11 @@ export default {
           },
           icon: "mdi-database-search",
         },
-        {
+        /*{
           text: "Import & Export",
           click: () => {},
           icon: "mdi-download-circle",
-        },
+        }*/
       ],
     };
   },
@@ -102,10 +102,18 @@ export default {
         this.$snackbar.errorhandle(err);
       }
     },
-    async reIndex() {
+    async reIndex(fileBlob) {
       try {
-        await this.$axios.get("/api/layers/reload");
-        this.$snackbar.success("Reload successfull");
+        if (fileBlob !== null) {
+          let formdata = new FormData();
+          formdata.append("layers", fileBlob, "upload.zip");
+          await this.$axios.post("/api/layers/upload", formdata, {
+            headers: { "Content-Type": "multipart/form-data" },
+          });
+        } else {
+          await this.$axios.get("/api/layers/reload");
+          this.$snackbar.success("Reload successfull");
+        }
       } catch (err) {
         this.$snackbar.errorhandle(err);
       } finally {
