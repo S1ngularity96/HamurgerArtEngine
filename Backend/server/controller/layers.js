@@ -141,8 +141,18 @@ async function getLayersReload(req, res) {
           layer: nLayer._id,
         });
         nLayer.images.push(nImage._id);
-        await nImage.save();
+
+        try {
+          await nImage.save();
+        } catch (err) {
+          api.ErrorResponse(res, [
+            err.toString(),
+            `${nImage.name} in layer ${nLayer.name} could not be added!`,
+          ]);
+          return;
+        }
       }
+
       await nLayer.save();
     }
     api.successResponse(res, "Fileindex reloaded successfully");
