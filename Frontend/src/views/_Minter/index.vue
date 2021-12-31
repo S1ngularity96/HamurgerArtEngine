@@ -11,6 +11,12 @@
       :limit="mintdialog.limit"
       @abort="stopMinting"
     ></mint-dialog>
+    <continue-dialog
+      :opened="continueDialog"
+      @yes="continueMinting"
+      @no="startMinting"
+      @close="continueDialog = false"
+    ></continue-dialog>
     <v-row>
       <v-col cols="12">
         <v-toolbar flat dense>
@@ -78,7 +84,7 @@
               @input="getMintedImages"
               v-model="pagination.page"
               total-visible="5"
-              :length="pagination.max"
+              :length="pagination.pages"
             ></v-pagination>
           </v-col>
         </v-row>
@@ -115,16 +121,29 @@
               <v-expansion-panel-content>
                 <v-row>
                   <v-col cols="12">
+                    <v-checkbox
+                      v-model="config.parallel"
+                      label="Build groups in parallel"
+                    ></v-checkbox>
                     <v-text-field
                       type="number"
-                      min="5"
+                      min="1"
                       max="10000"
                       outlined
-                      hide-details
                       dense
                       v-model.number="config.limit"
-                      placeholder="0"
+                      label="Limit"
                     ></v-text-field>
+                    <v-text-field
+                      type="number"
+                      min="1"
+                      outlined
+                      dense
+                      hide-details
+                      v-model.number="config.stepSize"
+                      label="Stepsize"
+                    >
+                    </v-text-field>
                   </v-col>
                 </v-row>
               </v-expansion-panel-content>
@@ -137,7 +156,7 @@
                     <v-btn block @click="getShuffle" color="orange">Shuffle</v-btn>
                   </v-col>
                   <v-col cols="12">
-                    <v-btn @click="startMinting" block color="green">Start minting</v-btn>
+                    <v-btn @click="prepareForMint" block color="green">Start minting</v-btn>
                   </v-col>
                 </v-row>
               </v-expansion-panel-content>
@@ -153,6 +172,7 @@
 <script>
 import SliderDialog from "../../components/Dialogs/SliderDialog.vue";
 import MintDialog from "../../components/Dialogs/MintDialog.vue";
+import ContinueDialog from "../../components/Dialogs/ContinueDialog.vue";
 export default {
   sockets: {
     "/mint/status": function(data) {
@@ -166,16 +186,19 @@ export default {
   components: {
     "slider-dialog": SliderDialog,
     "mint-dialog": MintDialog,
+    "continue-dialog": ContinueDialog,
   },
   data() {
     return {
+      continueDialog: false,
       mintdialog: {
         opened: false,
         created: 0,
         limit: 0,
       },
       pagination: {
-        max: 1,
+        totalItems: 0,
+        pages: 1,
         page: 1,
         pageSize: 10,
       },
@@ -184,8 +207,11 @@ export default {
         current: 0,
       },
       config: {
-        limit: 0,
+        limit: 1,
         all: true,
+        parallel: false,
+        stepSize: 1,
+        continueMint: false,
         groups: [],
       },
       groups: [],
@@ -194,7 +220,6 @@ export default {
       currentSlide: 0,
       panels: [0, 1, 2],
       slides: [],
-      base64: null,
     };
   },
 
@@ -221,7 +246,20 @@ export default {
         this.$snackbar.errorhandle(err);
       }
     },
+    prepareForMint() {
+      this.config.continueMint = false;
+      if (this.pagination.totalItems > 0) {
+        this.continueDialog = true;
+      } else {
+        this.startMinting();
+      }
+    },
+    continueMinting() {
+      this.config.continueMint = true;
+      this.startMinting();
+    },
     async startMinting() {
+      this.continueDialog = false;
       try {
         this.slides = [];
         let response = await this.$axios.post("/api/minter/init", {
@@ -287,7 +325,8 @@ export default {
       this.slides = response.data.data.items.map((image) => {
         return { src: `http://${this.$remote.host}:${this.$remote.port}/static${image.filepath}` };
       });
-      this.pagination.max = Math.ceil(response.data.data.count / this.pagination.pageSize);
+      this.pagination.totalItems = response.data.data.count;
+      this.pagination.pages = Math.ceil(response.data.data.count / this.pagination.pageSize);
     },
   },
 

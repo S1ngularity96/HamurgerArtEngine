@@ -10,49 +10,152 @@ const fs = require("fs");
 class Minter {
   constructor() {
     if (!Minter.instance) {
-      this.current = null;
-      this.incrementer = null;
-      this.conflictgraph = null;
-      this.layers = null;
-      this.imagesMap = null;
+      this.groups = [];
       this.running = false;
       Minter.instance = this;
     }
     return Minter.instance;
   }
 
-  initialize(layersWithImages) {
-    this.layers = layersWithImages.sort((a, b) => {
+  initialize(group, layersWithImages) {
+    group.layers = layersWithImages.sort((a, b) => {
       return a.order - b.order;
     });
-    this.incrementer = new LayerIncrementer();
-    this.incrementer.init(this.layers, { backwards: true });
-    const images = this.layers.reduce((prev, current) => {
-      return prev.concat(current.images);
+    group.incrementer = new LayerIncrementer();
+    group.incrementer.init(group.layers, { backwards: true });
+    const images = group.layers.reduce((first, next) => {
+      return first.concat(next.images);
     }, []);
-    this.imagesMap = new Map();
+    group.imagesMap = new Map();
     for (let image = 0; image < images.length; image++) {
-      this.imagesMap.set(images[image]._id.toString(), images[image]);
+      group.imagesMap.set(images[image]._id.toString(), images[image]);
     }
-
-    this.conflictgraph = GraphUtils.CreateConflictGraph(images);
+    group.conflictgraph = GraphUtils.CreateConflictGraph(images);
   }
 
-  checkConflict(number) {
+  addGroup(layersWithImages) {
+    let currentLen = this.groups.length;
+    this.groups.push({
+      index: currentLen,
+      layers: null,
+      imageIds: null,
+      imagesMap: null,
+      conflictgraph: null,
+      incrementer: null,
+      overflow: false,
+    });
+    this.initialize(this.groups[currentLen], layersWithImages);
+  }
+
+  clearGroups() {
+    this.groups = [];
+  }
+
+  checkConflict(group, number) {
     for (let n = 0; n < number.length; n++) {
-      if (this.layers[n].images.length > 0) {
+      if (group.layers[n].images.length > 0) {
         let result = GraphUtils.PairExists(
-          this.conflictgraph,
-          this.layers[n].images[number[n].value]._id.toString()
+          group.conflictgraph,
+          group.layers[n].images[number[n].value]._id.toString()
         );
         if (result === true) {
-          GraphUtils.UnmarkAllNodes(this.conflictgraph);
+          GraphUtils.UnmarkAllNodes(group.conflictgraph);
           return { conflicts: true, number };
         }
       }
     }
-    GraphUtils.UnmarkAllNodes(this.conflictgraph);
+    GraphUtils.UnmarkAllNodes(group.conflictgraph);
     return { conflicts: false, number };
+  }
+
+  /**
+   * Returns array with associated image ids by the given magic number
+   * @param {Object} group Contains data for specific group of layers
+   * @param {Number} number Magic number from the incrementer
+   */
+  getAssociatedImageIds(group, number) {
+    let images = group.imagesMap;
+    let layers = group.layers;
+    return number
+      .map((num, index) => {
+        if (layers[index].images.length > 0) {
+          return images.get(layers[index].images[num.value]._id.toString());
+        }
+        return null;
+      })
+      .filter((val) => val !== null); // get only those images which could have been found
+  }
+
+  getStatistics() {}
+
+  /**
+   *
+   * @param {Number} limit set the limit for the number of images
+   * @param {Number} optIndex set atIndex-value by this parameter
+   * @param {Number} stepSize set the increment-size
+   * @param {Boolean} parallel set if groups should be processed in parallel
+   * @returns
+   */
+  async createImages(limit, stepSize, parallel, optIndex) {
+    let atIndex = optIndex ? optIndex : 0;
+    let overflow = false;
+    let sockio = new SocketIO();
+    const groupLen = this.groups.length;
+    this.running = true;
+
+    if (parallel && groupLen > 0) {
+      let currentGroupIndex = 0;
+      let numOfOverflows = 0;
+      while (atIndex < limit && numOfOverflows !== groupLen && this.running) {
+        let group = this.groups[currentGroupIndex];
+        if (!group.overflow) {
+          let res = this.next(group, stepSize);
+          if (res.overflow) {
+            numOfOverflows++;
+            group.overflow = true;
+          }
+          if (res.conflicts === false && !group.overflow) {
+            group.imageIds = this.getAssociatedImageIds(group, res.number);
+            let { absolute, relative } = await this.saveMinted(atIndex, group.imageIds);
+            await GeneratedImage.create({
+              order: atIndex,
+              images: group.imageIds, //ids
+              filepath: relative,
+            });
+            atIndex++;
+            sockio.emit("/mint/status", { running: true, created: atIndex, of: limit });
+          }
+        }
+        currentGroupIndex = (currentGroupIndex + 1) % groupLen; //loop each group
+      }
+    } else {
+      //sequentual process
+      for (let groupIndex = 0; groupIndex < groupLen; groupIndex++) {
+        let group = this.groups[groupIndex];
+        while (atIndex < limit && group.overflow === false && this.running) {
+          let res = this.next(group, stepSize);
+          group.overflow = res.overflow;
+          if (group.overflow) break;
+          if (res.conflicts === false) {
+            group.imageIds = this.getAssociatedImageIds(group, res.number);
+            let { absolute, relative } = await this.saveMinted(atIndex, group.imageIds);
+            await GeneratedImage.create({
+              order: atIndex,
+              images: group.imageIds, //ids
+              filepath: relative,
+            });
+            atIndex++;
+            sockio.emit("/mint/status", { running: true, created: atIndex, of: limit });
+          }
+        }
+      }
+    }
+    sockio.emit("/mint/status", { running: false, created: atIndex, of: limit });
+    return atIndex;
+  }
+
+  async stopMinter() {
+    this.running = false;
   }
 
   async saveMinted(index, images) {
@@ -66,58 +169,18 @@ class Minter {
     return { absolute: filepath, relative: `/generated/${index}-minted.png` };
   }
 
-  updateCurrent(number) {
-    let images = this.imagesMap;
-    let layers = this.layers;
-    this.current = number
-      .map((num, index) => {
-        if (layers[index].images.length > 0) {
-          return images.get(layers[index].images[num.value]._id.toString());
+  next(group, stepSize) {
+    if (group.incrementer !== null) {
+      let result;
+      if (group.imageIds === null) {
+        result = group.incrementer.reset();
+      } else {
+        let step = 0;
+        for (step; step < stepSize; step++) {
+          result = group.incrementer.increment();
         }
-        return null;
-      })
-      .filter((val) => val !== null);
-  }
-
-  /**
-   *
-   * @param {Number} limit Set the limit for the number of images
-   * @param {Number} optImagesCreated Set imagesCreated-value by this parameter
-   * @returns
-   */
-  async createImages(limit, optImagesCreated) {
-    let imagesCreated = optImagesCreated ? optImagesCreated : 0;
-    let overflow = false;
-    let sockio = new SocketIO();
-    this.running = true;
-    while (imagesCreated != limit && overflow === false && this.running) {
-      let res = this.next();
-      overflow = res.overflow;
-      
-      if (res.conflicts === false) {
-        this.updateCurrent(res.number);
-        let { absolute, relative } = await this.saveMinted(imagesCreated, this.current);
-        await GeneratedImage.create({
-          order: imagesCreated,
-          images: this.current,
-          filepath: relative,
-        });
-        imagesCreated++;
-        sockio.emit("/mint/status", { running: true, created: imagesCreated, of: limit });
       }
-    }
-    sockio.emit("/mint/status", { running: false, created: imagesCreated, of: limit });
-    return imagesCreated;
-  }
-
-  async stopMinter() {
-    this.running = false;
-  }
-
-  next() {
-    if (this.incrementer !== null) {
-      let result = this.current === null ? this.incrementer.reset() : this.incrementer.increment();
-      let check = this.checkConflict(result.number);
+      let check = this.checkConflict(group, result.number);
       return { overflow: result.overflow, conflicts: check.conflicts, number: result.number };
     }
     return null;

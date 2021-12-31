@@ -66,40 +66,40 @@ async function getStopMinter(req, res) {
 }
 
 async function postInitMinter(req, res, next) {
-  let { all, groups, limit } = req.body.config;
+  let { all, groups, limit, stepSize, parallel, continueMint } = req.body.config;
+  let optIndex = 0;
   limit = limit > 0 ? limit : 10000;
+
+  if (continueMint) {
+    optIndex = await GeneratedImage.find({}).count();
+  } else {
+    await GeneratedImage.deleteMany({});
+  }
+
   try {
     if (all === true) {
-      await GeneratedImage.deleteMany({});
       let layer = await Layer.find({}).populate({ path: "images" });
       const minter = new Minter();
-      console.log(layer);
-      minter.initialize(layer);
-      await minter.createImages(limit);
+      minter.clearGroups();
+      minter.addGroup(layer);
+      await minter.createImages(limit, stepSize, parallel, optIndex);
       next();
       return;
     } else {
-      await GeneratedImage.deleteMany({});
       let allgroups = await ImageGroup.find({ _id: groups }).populate({
         path: "images",
         populate: { path: "layer", select: "_id, order" },
       });
-
       let layer = await Layer.find({});
-      let layerOfGroups = [];
+      const minter = new Minter();
+      minter.clearGroups();
       for (let group = 0; group < allgroups.length; group++) {
         //make deep clone to not fetch data from database again
         let tmpLayers = cloneDeep(layer);
         let layerGroup = await createLayersFromGroup(tmpLayers, allgroups[group]);
-        layerOfGroups.push(layerGroup);
+        minter.addGroup(layerGroup);
       }
-
-      let imagesCreated = 0;
-      const minter = new Minter();
-      for (let lgr = 0; lgr < layerOfGroups.length; lgr++) {
-        minter.initialize(layerOfGroups[lgr]);
-        imagesCreated = await minter.createImages(limit, imagesCreated);
-      }
+      await minter.createImages(limit, stepSize, parallel, optIndex);
       next();
     }
   } catch (err) {
