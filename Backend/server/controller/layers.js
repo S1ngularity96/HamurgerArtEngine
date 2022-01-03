@@ -1,5 +1,5 @@
 const api = require("../helper/api");
-const { Layer, Image, ImageGroup } = require("../../models/dbmodels");
+const { Layer, Image, ImageGroup, GeneratedImage } = require("../../models/dbmodels");
 const { layersDir } = require("../../config");
 const { getIndex } = require("../helper/fsHelper");
 const { groupConstraints, flatValidate } = require("../helper/validate");
@@ -109,7 +109,7 @@ async function postUploadZIPLayers(req, res, next) {
   const file = req.file;
   const body = req.body;
   try {
-    fs.rmdirSync(layersDir, { recursive: true });
+    fs.rmSync(layersDir, { recursive: true, force: true })
     fs.mkdirSync(layersDir);
     let zip = new AdmZip(file.path);
     zip.extractAllTo(`${layersDir}/`, true);
@@ -127,6 +127,7 @@ async function getLayersReload(req, res) {
     await Image.deleteMany({});
     await Layer.deleteMany({});
     await ImageGroup.deleteMany({});
+    await GeneratedImage.deleteMany({});
 
     for (let it = 1; it <= layers.length; it++) {
       let layer = layers[it - 1];

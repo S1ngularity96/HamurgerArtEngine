@@ -50,7 +50,7 @@
           <v-card-title>Edit Group</v-card-title>
           <v-card-text>
             <v-text-field hide-details outlined label="Name" v-model="group.name"></v-text-field>
-            <v-checkbox v-model="group.exclusive" label="Exclusive Group"></v-checkbox>
+            <v-checkbox disabled v-model="group.exclusive" label="Exclusive Group"></v-checkbox>
             <v-btn block outlined color="green" @click="selectDialog = true">Add Images</v-btn>
           </v-card-text>
           <v-card-text>
