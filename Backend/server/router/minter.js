@@ -7,5 +7,8 @@ router.get("/shuffle", minterController.getShuffle, minterController.getMintedIm
 router.post("/images/:skip", minterController.getMintedImages);
 router.get("/next", minterController.getNext);
 router.get("/filters", minterController.getFilters);
-router.get("/download/minted.zip", minterController.getDownload)
+router.get("/download/minted.zip", minterController.getDownload);
+router.get("/metadata/:id", minterController.getMetadataById);
+router.get("/metadata", minterController.getMetadataOfImages);
+router.get("/statistics", minterController.getStatistics);
 module.exports = router;

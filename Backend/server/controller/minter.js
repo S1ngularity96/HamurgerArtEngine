@@ -6,7 +6,7 @@ const { GeneratedImage, Image } = require("../../models/dbmodels");
 const { generateShuffledSequence } = require("../../Utils/Shuffle");
 const { cloneDeep } = require("lodash/lang");
 const { createLayersFromGroup } = require("../functions/models");
-
+const SocketIO = require("../websocket/sock");
 const fs = require("fs");
 const AdmZip = require("adm-zip");
 
@@ -73,6 +73,8 @@ async function postInitMinter(req, res, next) {
   if (continueMint) {
     optIndex = await GeneratedImage.find({}).count();
   } else {
+    fs.rmSync(imagesDir, { recursive: true, force: true });
+    fs.mkdirSync(imagesDir);
     await GeneratedImage.deleteMany({});
   }
 
@@ -120,6 +122,66 @@ async function getNext(req, res) {
   }
 }
 
+async function getMetadataOfImages(req, res) {
+  try {
+    let images = await GeneratedImage.find({}).populate({
+      path: "images",
+      select: "name",
+      populate: { path: "layer", select: "name" },
+    });
+
+    images = images.map((image) => {
+      return {
+        image: `https://tokenURI/${image.order}.png`,
+        tokenId: image.order,
+        name: `#${image.order}`,
+        attributes: image.images.map((attribute) => {
+          return {
+            trait_type: attribute.layer.name,
+            value: attribute.name.replace(".jpg", "").replace(".png", ""),
+          };
+        }),
+      };
+    });
+    api.successResponseWithData(res, "OK", images);
+  } catch (err) {
+    api.ErrorResponse(res, err.toString());
+  }
+}
+
+async function getMetadataById(req, res) {
+  let id = req.params.id;
+  console.log(id);
+  if (!id) {
+    api.BadRequestResponse(res, "No ID was given!");
+    return;
+  }
+
+  try {
+    let image = await GeneratedImage.findById(id).populate({
+      path: "images",
+      select: "name",
+      populate: { path: "layer", select: "name" },
+    });
+
+    let metadata = {
+      image: `https://tokenURI/${image.order}.png`,
+      tokenId: image.order,
+      name: `#${image.order}`,
+      attributes: image.images.map((attribute) => {
+        return {
+          trait_type: attribute.layer.name,
+          value: attribute.name.replace(".jpg", "").replace(".png", ""),
+        };
+      }),
+    };
+    api.successResponseWithData(res, "OK", metadata);
+  } catch (err) {
+    api.ErrorResponse(res, err.toString());
+    return;
+  }
+}
+
 async function getDownload(req, res) {
   const zipFile = `${publicDir}/minted.zip`;
   try {
@@ -129,6 +191,7 @@ async function getDownload(req, res) {
     zip.writeZip(zipFile);
     api.successDownload(res, zipFile);
   } catch (err) {
+    console.log(err);
     api.ErrorResponse(res, "Could not create archive with files");
   }
 }
@@ -176,4 +239,6 @@ module.exports = {
   getShuffle,
   getDownload,
   getStatistics,
+  getMetadataOfImages,
+  getMetadataById,
 };
