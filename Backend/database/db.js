@@ -1,14 +1,11 @@
-const config = require("../config");
-const path = require("path");
-
 const mongoose = require("mongoose");
 
-async function connect() {
-  await mongoose.connect("mongodb://mongo:27017", {
+async function connect(options) {
+  await mongoose.connect(`mongodb://${options.host}:27017`, {
     user: "root",
     pass: "3ei0kiMxfYnXtWlec6Ok",
     autoCreate: true,
-    dbName: "wickedmolly"
+    dbName: "wickedmolly",
   });
 }
 

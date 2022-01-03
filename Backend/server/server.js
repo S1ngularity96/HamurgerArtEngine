@@ -30,8 +30,9 @@ const { mongoose, connect } = require("../database/db");
 
 async function StartServer() {
   try {
-    await connect();
+    await connect({host: "mongo"});
     process.on("exit", async () => {
+      console.log("Disconnecting from database ... ")
       await mongoose.disconnect();
     });
   } catch (err) {
