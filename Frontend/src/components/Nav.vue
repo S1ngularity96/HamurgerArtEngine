@@ -1,8 +1,7 @@
 <template>
   <v-navigation-drawer app permanent expand-on-hover>
-    
     <v-list nav dense>
-      <v-list-item v-for="(item, index) in navitems" :key="index" :to=item.to>
+      <v-list-item v-for="(item, index) in navitems" :key="index" :to="item.to">
         <v-list-item-icon>
           <v-icon>{{ item.icon }}</v-icon>
         </v-list-item-icon>
@@ -19,6 +18,7 @@ export default {
       navitems: [
         { name: "Layer", icon: "mdi-folder-multiple-image", to: "/" },
         { name: "Minter", icon: "mdi-hammer-screwdriver", to: "/minter" },
+        { name: "Statistics", icon: "mdi-chart-bar-stacked", to: "/stats" },
         { name: "Settings", icon: "mdi-cog", to: "/settings" },
       ],
     };
@@ -26,5 +26,4 @@ export default {
 };
 </script>
 
-<style>
-</style>
+<style></style>
