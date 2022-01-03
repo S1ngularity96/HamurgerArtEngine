@@ -30,13 +30,10 @@
               ></v-img>
             </v-col>
           </v-row>
-          <p
-            v-if="group.exclusive"
-            class="d-flex justify-center ma-0 pa-0 red--text text--lighten-1 overline"
-          >
-            exclusive
-          </p>
         </v-card-text>
+        <p v-if="group.exclusive" class="d-flex justify-center ma-0 pa-0 red--text text--lighten-1 overline">
+          exclusive
+        </p>
       </v-card>
     </template>
   </v-hover>
