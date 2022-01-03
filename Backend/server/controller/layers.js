@@ -301,9 +301,10 @@ async function postGroup(req, res, next) {
 
 async function deleteGroup(req, res, next) {
   let groupid = req.params.id;
+  console.log(req.params.id)
   if (groupid) {
     try {
-      await ImageGroup.deleteOne({ id: groupid });
+      await ImageGroup.findByIdAndDelete(groupid);
       next();
     } catch (err) {
       api.ErrorResponse(res, err.toString());
