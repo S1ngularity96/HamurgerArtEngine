@@ -11,6 +11,7 @@
       :limit="mintdialog.limit"
       @abort="stopMinting"
     ></mint-dialog>
+    <download-dialog :opened="downloadDialog" @close="downloadDialog = false"></download-dialog>
     <continue-dialog
       :opened="continueDialog"
       @yes="continueMinting"
@@ -21,12 +22,10 @@
       <v-col cols="12">
         <v-toolbar flat dense>
           <v-spacer></v-spacer>
-          <a :href="`http://${$remote.host}:${$remote.port}/api/minter/download/minted.zip`">
-            <v-btn color="orange">
-              Download
-              <v-icon>mdi-download</v-icon>
-            </v-btn>
-          </a>
+          <v-btn @click="downloadDialog = true" color="orange">
+            Download
+            <v-icon>mdi-download</v-icon>
+          </v-btn>
         </v-toolbar>
       </v-col>
     </v-row>
@@ -69,11 +68,7 @@
         <v-responsive height="75vh" class="panel-responsive">
           <v-row>
             <v-col v-for="(src, index) in slides" :key="index" cols="3">
-              <v-card @click="onCardImageClick(index)">
-                <v-card-text>
-                  <v-img :src="src"></v-img>
-                </v-card-text>
-              </v-card>
+              <mint-card :src="src" @click="onCardImageClick(index)"></mint-card>
             </v-col>
           </v-row>
         </v-responsive>
@@ -90,80 +85,11 @@
         </v-row>
       </v-col>
       <v-col cols="2">
-        <v-card>
-          <v-card-title>Mint Settings</v-card-title>
-          <v-expansion-panels v-model="panels" multiple flat accordion>
-            <v-expansion-panel>
-              <v-expansion-panel-header class="px-5">Groups</v-expansion-panel-header>
-              <v-expansion-panel-content>
-                <v-responsive content-class="panel-responsive" max-height="15vh">
-                  <v-checkbox
-                    v-model="config.all"
-                    class="my-0"
-                    hide-details
-                    label="All"
-                  ></v-checkbox>
-                  <v-checkbox
-                    :disabled="config.all"
-                    v-for="group in groups"
-                    :key="group.name"
-                    :value="group._id"
-                    v-model="config.groups"
-                    hide-details
-                    class="my-0"
-                    :label="group.name"
-                  ></v-checkbox>
-                </v-responsive>
-              </v-expansion-panel-content>
-            </v-expansion-panel>
-            <v-expansion-panel>
-              <v-expansion-panel-header class="px-5">Createoptions</v-expansion-panel-header>
-              <v-expansion-panel-content>
-                <v-row>
-                  <v-col cols="12">
-                    <v-checkbox
-                      v-model="config.parallel"
-                      label="Build groups in parallel"
-                    ></v-checkbox>
-                    <v-text-field
-                      type="number"
-                      min="1"
-                      max="10000"
-                      outlined
-                      dense
-                      v-model.number="config.limit"
-                      label="Limit"
-                    ></v-text-field>
-                    <v-text-field
-                      type="number"
-                      min="1"
-                      outlined
-                      dense
-                      hide-details
-                      v-model.number="config.stepSize"
-                      label="Stepsize"
-                    >
-                    </v-text-field>
-                  </v-col>
-                </v-row>
-              </v-expansion-panel-content>
-            </v-expansion-panel>
-            <v-expansion-panel>
-              <v-expansion-panel-header class="px-5">Functions</v-expansion-panel-header>
-              <v-expansion-panel-content>
-                <v-row>
-                  <v-col cols="12">
-                    <v-btn block @click="getShuffle" color="orange">Shuffle</v-btn>
-                  </v-col>
-                  <v-col cols="12">
-                    <v-btn @click="prepareForMint" block color="green">Start minting</v-btn>
-                  </v-col>
-                </v-row>
-              </v-expansion-panel-content>
-            </v-expansion-panel>
-          </v-expansion-panels>
-          <v-card-actions> </v-card-actions>
-        </v-card>
+        <mint-settings
+          mintText="Start minting"
+          @mint="prepareForMint"
+          @shuffle="getShuffle"
+        ></mint-settings>
       </v-col>
     </v-row>
   </v-container>
@@ -173,6 +99,9 @@
 import SliderDialog from "../../components/Dialogs/SliderDialog.vue";
 import MintDialog from "../../components/Dialogs/MintDialog.vue";
 import ContinueDialog from "../../components/Dialogs/ContinueDialog.vue";
+import DownloadDialog from "../../components/Dialogs/DownloadDialog.vue";
+import MintSettings from "../../components/Minter/MintSettings.vue";
+import MintCard from "../../components/Minter/MintCard.vue";
 export default {
   sockets: {
     "/mint/status": function(data) {
@@ -187,10 +116,16 @@ export default {
     "slider-dialog": SliderDialog,
     "mint-dialog": MintDialog,
     "continue-dialog": ContinueDialog,
+    "download-dialog": DownloadDialog,
+    "mint-settings": MintSettings,
+    "mint-card": MintCard,
   },
   data() {
     return {
+      menu: false,
+      config: null, //save
       continueDialog: false,
+      downloadDialog: false,
       mintdialog: {
         opened: false,
         created: 0,
@@ -206,19 +141,10 @@ export default {
         opened: false,
         current: 0,
       },
-      config: {
-        limit: 1,
-        all: true,
-        parallel: false,
-        stepSize: 1,
-        continueMint: false,
-        groups: [],
-      },
       groups: [],
       filters: [],
       selectedFilter: [],
       currentSlide: 0,
-      panels: [0, 1, 2],
       slides: [],
     };
   },
@@ -228,17 +154,7 @@ export default {
       this.slider.current = index;
       this.slider.opened = true;
     },
-    async getMintGroups() {
-      try {
-        let response = await this.$axios.get("/api/layers/groups");
-        let groupArray = response.data.data;
-        this.groups = groupArray.map((group) => {
-          return { name: group.name, _id: group._id, value: false };
-        });
-      } catch (err) {
-        this.$snackbar.errorhandle(err);
-      }
-    },
+
     async stopMinting() {
       try {
         this.$axios.get("/api/minter/stop");
@@ -246,7 +162,8 @@ export default {
         this.$snackbar.errorhandle(err);
       }
     },
-    prepareForMint() {
+    prepareForMint(config) {
+      this.config = config;
       this.config.continueMint = false;
       if (this.pagination.totalItems > 0) {
         this.continueDialog = true;
@@ -259,6 +176,7 @@ export default {
       this.startMinting();
     },
     async startMinting() {
+      if (this.config === null) this.$snackbar.error("Konfiguration nicht geladen");
       this.continueDialog = false;
       try {
         this.slides = [];
@@ -322,8 +240,12 @@ export default {
       }
     },
     setMintedImagesData(response) {
+      console.log(response);
       this.slides = response.data.data.items.map((image) => {
-        return { src: `http://${this.$remote.host}:${this.$remote.port}/static${image.filepath}` };
+        return {
+          src: `http://${this.$remote.host}:${this.$remote.port}/static${image.filepath}`,
+          id: image._id,
+        };
       });
       this.pagination.totalItems = response.data.data.count;
       this.pagination.pages = Math.ceil(response.data.data.count / this.pagination.pageSize);
@@ -331,7 +253,6 @@ export default {
   },
 
   async mounted() {
-    await this.getMintGroups();
     await this.getFilters();
     await this.getMintedImages();
   },
