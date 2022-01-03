@@ -3,6 +3,7 @@ import VueRouter from "vue-router";
 import Layers from "../views/_Layer/index";
 import Layer from "../views/_Layer/_id";
 import Minter from "../views/_Minter/index";
+import Statistics from "../views/_Stats/index";
 import Settings from "../views/_Settings/index";
 import GroupById from "../views/_Group/_id";
 Vue.use(VueRouter);
@@ -22,6 +23,11 @@ const routes = [
     path: "/minter",
     name: "Minter",
     component: Minter,
+  },
+  {
+    path: "/stats",
+    name: "Statistics",
+    component: Statistics,
   },
   {
     path: "/settings",

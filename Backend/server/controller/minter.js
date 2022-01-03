@@ -2,7 +2,7 @@ const api = require("../helper/api");
 const Minter = require("../../Utils/Minter");
 const { layersDir, publicDir, imagesDir } = require("../../config");
 const { Layer, ImageGroup } = require("../../models/dbmodels");
-const { GeneratedImage } = require("../../models/dbmodels");
+const { GeneratedImage, Image } = require("../../models/dbmodels");
 const { generateShuffledSequence } = require("../../Utils/Shuffle");
 const { cloneDeep } = require("lodash/lang");
 const { createLayersFromGroup } = require("../functions/models");
@@ -133,6 +133,40 @@ async function getDownload(req, res) {
   }
 }
 
+async function getStatistics(req, res) {
+  let imageMap = new Map();
+  try {
+    let generatedImages = await GeneratedImage.find({});
+    let totalNumberOfTraits = 0;
+    if (generatedImages.length > 0) {
+      let images = await Image.find({});
+      images.forEach((image) => {
+        let copyImage = image.toObject();
+        copyImage.present = 0;
+        imageMap.set(image._id.toString(), copyImage);
+      });
+      generatedImages.forEach((gen) => {
+        gen.images.forEach((image) => {
+          imageMap.get(image.toString()).present++;
+          totalNumberOfTraits++;
+        });
+      });
+      imageMap.forEach((value, key) => {
+        let rarity = value.present / totalNumberOfTraits;
+        value.rarity = `${rarity} %`;
+      });
+
+      let stats = Array.from(imageMap.values());
+      api.successResponseWithData(res, "OK", stats);
+    } else {
+      api.ErrorResponse(res, "List of generated images is empty");
+    }
+  } catch (err) {
+    console.log(err);
+    api.ErrorResponse(res, err.toString());
+  }
+}
+
 module.exports = {
   postInitMinter,
   getStopMinter,
@@ -141,4 +175,5 @@ module.exports = {
   getMintedImages,
   getShuffle,
   getDownload,
+  getStatistics,
 };

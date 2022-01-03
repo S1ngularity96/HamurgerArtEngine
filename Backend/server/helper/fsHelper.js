@@ -5,7 +5,7 @@ const crypto = require("crypto-js");
 function findPngsInDirectory(dir, formatter) {
   return fs
     .readdirSync(dir)
-    .filter((file) => file.endsWith(".png"))
+    .filter((file) => file.endsWith(".png") ||file.endsWith(".jpg"))
     .map((file) => {
       if (formatter) {
         return formatter(file);
