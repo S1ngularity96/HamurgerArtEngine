@@ -22,7 +22,7 @@ class Minter {
       return a.order - b.order;
     });
     group.incrementer = new LayerIncrementer();
-    group.incrementer.init(group.layers, { backwards: true });
+    group.incrementer.init(group.layers, { backwards: false });
     const images = group.layers.reduce((first, next) => {
       return first.concat(next.images);
     }, []);
@@ -164,9 +164,9 @@ class Minter {
     });
     let baseImage = await mergeImages(sources, { Canvas: Canvas, Image: Image });
     let base64Data = baseImage.replace(/^data:image\/png;base64,/, "");
-    let filepath = `${imagesDir}/${index}-minted.png`;
+    let filepath = `${imagesDir}/${index}`;
     fs.writeFileSync(filepath, base64Data, "base64");
-    return { absolute: filepath, relative: `/generated/${index}-minted.png` };
+    return { absolute: filepath, relative: `/generated/${index}`};
   }
 
   next(group, stepSize) {
