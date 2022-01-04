@@ -12,31 +12,22 @@ let settingsConstraints = {
     presence: true,
     type: "string",
   },
-  startAt: {
+  assetprefix: {
     presence: true,
-    type: "integer",
-    numericality: {
-      greaterThan: -1,
+    type: "string",
+  },
+  baseURI: {
+    presence: true,
+    type: "string",
+    url: {
+      schemes: ["http", "https", "ipfs"],
+      allowLocal: true,
     },
   },
-  priceDefault: {
-    type: "number",
+  description: {
     presence: true,
-    priceIsBetween: true,
-  },
-  priceMin: {
-    type: "number",
-    presence: true,
-    numericality: {
-      greaterThan: -1,
-    },
-  },
-  priceMax: {
-    type: "number",
-    presence: true,
-    numericality: {
-      greaterThan: -1,
-    },
+    type: "string",
+    length: { minimum: 1 },
   },
 };
 

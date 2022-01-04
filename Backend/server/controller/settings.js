@@ -4,18 +4,14 @@ const { env } = require("../../config");
 const api = require("../helper/api");
 const settingsFile = path.join(env.DATABASE_DIR, "settings.json");
 const { flatValidate, settingsConstraints } = require("../helper/validate");
+
 function getSettings(req, res) {
   if (!fs.existsSync(settingsFile)) {
     let defaultSettings = {
       name: "",
-      startAt: 0,
-      priceDefault: 0,
-      priceMin: 0,
-      priceMax: 0,
-      imageHeigth: 0,
-      imageWidth: 0,
-      thumbnailHeigth: 0,
-      thumbnailWidth: 0,
+      assetprefix: "",
+      baseURI: "",
+      description: "",
     };
 
     fs.writeFileSync(settingsFile, JSON.stringify(defaultSettings));

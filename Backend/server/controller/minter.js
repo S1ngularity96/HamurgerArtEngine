@@ -1,14 +1,16 @@
 const api = require("../helper/api");
 const Minter = require("../../Utils/Minter");
-const { layersDir, publicDir, imagesDir } = require("../../config");
+const { layersDir, publicDir, imagesDir, env } = require("../../config");
 const { Layer, ImageGroup } = require("../../models/dbmodels");
 const { GeneratedImage, Image } = require("../../models/dbmodels");
 const { generateShuffledSequence } = require("../../Utils/Shuffle");
 const { cloneDeep } = require("lodash/lang");
 const { createLayersFromGroup } = require("../functions/models");
-const SocketIO = require("../websocket/sock");
+const path = require("path");
 const fs = require("fs");
 const AdmZip = require("adm-zip");
+
+const settingsFile = path.join(env.DATABASE_DIR, "settings.json");
 
 async function getFilters(req, res) {
   try {
@@ -123,18 +125,29 @@ async function getNext(req, res) {
 }
 
 async function getMetadataOfImages(req, res) {
+  if (!fs.existsSync(settingsFile)) {
+    api.ErrorResponse(res, "Please add settings for metadata");
+    return;
+  }
+
   try {
-    let images = await GeneratedImage.find({}).populate({
-      path: "images",
-      select: "name",
-      populate: { path: "layer", select: "name" },
-    });
+    let settingsJSON = fs.readFileSync(settingsFile);
+    let settings = JSON.parse(settingsJSON);
+
+    let images = await GeneratedImage.find({})
+      .sort({ order: "asc" })
+      .populate({
+        path: "images",
+        select: "name",
+        populate: { path: "layer", select: "name" },
+      });
 
     images = images.map((image) => {
       return {
-        image: `https://tokenURI/${image.order}.png`,
+        name: `${settings.assetprefix}${image.order}`,
+        description: `${settings.description}`,
         tokenId: image.order,
-        name: `#${image.order}`,
+        image: `${settings.baseURI}${image.order}`,
         attributes: image.images.map((attribute) => {
           return {
             trait_type: attribute.layer.name,
@@ -150,14 +163,21 @@ async function getMetadataOfImages(req, res) {
 }
 
 async function getMetadataById(req, res) {
+  if (!fs.existsSync(settingsFile)) {
+    api.ErrorResponse(res, "Please add settings for metadata");
+    return;
+  }
+
   let id = req.params.id;
-  console.log(id);
   if (!id) {
     api.BadRequestResponse(res, "No ID was given!");
     return;
   }
 
   try {
+    let settingsJSON = fs.readFileSync(settingsFile);
+    let settings = JSON.parse(settingsJSON);
+
     let image = await GeneratedImage.findById(id).populate({
       path: "images",
       select: "name",
@@ -165,9 +185,10 @@ async function getMetadataById(req, res) {
     });
 
     let metadata = {
-      image: `https://tokenURI/${image.order}.png`,
+      name: `${settings.assetprefix}${image.order}`,
+      description: `${settings.description}`,
       tokenId: image.order,
-      name: `#${image.order}`,
+      image: `${settings.baseURI}${image.order}`,
       attributes: image.images.map((attribute) => {
         return {
           trait_type: attribute.layer.name,
