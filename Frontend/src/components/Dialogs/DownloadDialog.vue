@@ -10,7 +10,7 @@
               <v-checkbox v-model="metadata" hide-details label="with *.json metadata"></v-checkbox>
             </v-col>
           </v-row>
-          <v-row>
+          <!--<v-row>
             <v-col cols="12">
               <p>Please wait ...</p>
               <v-progress-linear rounded stream :value="0" height="25" color="green">
@@ -19,19 +19,18 @@
                 </template>
               </v-progress-linear>
             </v-col>
-          </v-row>
+          </v-row> -->
         </v-container>
       </v-card-text>
       <v-card-actions>
-        <v-btn @click="$emit('close', null)" color="red">Close</v-btn>
-        <v-spacer></v-spacer>
-        <a
-          :href="
-            `http://${$remote.host}:${$remote.port}/api/minter/download/minted.zip?metadata=${metadata}`
-          "
-        >
-          <v-btn @click="$emit('yes', null)" color="green">Continue</v-btn>
-        </a>
+        <v-col cols="6">
+          <v-btn @click="$emit('close', null)" block color="red">Close</v-btn>
+        </v-col>
+        <v-col cols="6">
+          <a style="text-decoration:none;" :href="downloadLink">
+            <v-btn @click="$emit('yes', null)" block color="green">Continue</v-btn>
+          </a>
+        </v-col>
       </v-card-actions>
     </v-card>
   </v-dialog>
@@ -41,6 +40,11 @@
 export default {
   props: {
     opened: Boolean,
+  },
+  computed: {
+    downloadLink() {
+      return `http://${this.$remote.host}:${this.$remote.port}/api/minter/download/minted.zip?metadata=${this.metadata}`;
+    },
   },
   data() {
     return {

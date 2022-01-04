@@ -13,7 +13,7 @@
 
       <v-card-actions>
         <v-spacer></v-spacer>
-        <v-btn @click="$emit('abort', null)" outlined color="red">Abort</v-btn>
+        <v-btn @click="$emit('abort', null)"  color="red">Abort</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>

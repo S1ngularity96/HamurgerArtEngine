@@ -10,7 +10,7 @@
               again. Do you want continue?</span
             >
           </v-col>
-          <v-col cols="11">
+          <v-col cols="12">
             <v-file-input
               @change="onFileChange"
               :solo="!$vuetify.theme.dark"
@@ -30,9 +30,12 @@
         </v-row>
       </v-card-text>
       <v-card-actions>
-        <v-spacer></v-spacer>
-        <v-btn @click="btnContinue" outlined color="green">{{ btnText }}</v-btn>
-        <v-btn @click="btnCancel" outlined color="red">Cancel</v-btn>
+        <v-col cols="6">
+          <v-btn block @click="btnCancel" color="red">Cancel</v-btn>
+        </v-col>
+        <v-col cols="6">
+          <v-btn block @click="btnContinue" color="green">{{ btnText }}</v-btn>
+        </v-col>
       </v-card-actions>
     </v-card>
   </v-dialog>

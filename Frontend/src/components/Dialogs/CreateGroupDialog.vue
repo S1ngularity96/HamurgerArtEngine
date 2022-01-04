@@ -21,8 +21,8 @@
       </v-card-text>
       <v-card-actions>
         <v-spacer></v-spacer>
-        <v-btn @click="btnCreate" outlined color="green">Create</v-btn>
-        <v-btn @click="btnCancel" outlined color="red">Cancel</v-btn>
+        <v-btn @click="btnCancel" color="red">Cancel</v-btn>
+        <v-btn @click="btnCreate" color="green">Create</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
@@ -43,7 +43,10 @@ export default {
     async btnCreate() {
       try {
         if (this.validate()) {
-          let response = await this.$axios.post("/api/layers/group", { name: this.name, exclusive: this.exclusive });
+          let response = await this.$axios.post("/api/layers/group", {
+            name: this.name,
+            exclusive: this.exclusive,
+          });
           this.$emit("data", response.data.data);
           this.$emit("input", false);
         }

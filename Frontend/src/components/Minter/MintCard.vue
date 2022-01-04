@@ -10,7 +10,10 @@
 
     <v-card v-if="metadata">
       <v-card-title>{{ metadata.name }}</v-card-title>
-      <v-card-subtitle>{{ metadata.image }}</v-card-subtitle>
+      <v-card-subtitle>
+        {{ metadata.image }} <br />
+        {{ metadata.description }}
+      </v-card-subtitle>
       <v-divider></v-divider>
       <v-simple-table dense>
         <template v-slot:default>

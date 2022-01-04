@@ -27,7 +27,7 @@
       </v-card-text>
       <v-card-actions>
         <v-spacer></v-spacer>
-        <v-btn @click="cancel" outlined color="green">Close</v-btn>
+        <v-btn @click="cancel" block color="green">Close</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>

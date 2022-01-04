@@ -5,13 +5,16 @@
         {{ dTitle }}
       </v-card-title>
       <v-card-text>
-        {{dText}}
+        {{ dText }}
       </v-card-text>
       <v-divider v-if="dText"></v-divider>
       <v-card-actions>
-        <v-spacer></v-spacer>
-        <v-btn @click="yes" outlined color="green">Continue</v-btn>
-        <v-btn @click="$emit('input', false)" outlined color="red">Cancel</v-btn>
+        <v-col cols="6">
+          <v-btn block @click="$emit('input', false)" color="red">Cancel</v-btn>
+        </v-col>
+        <v-col cols="6">
+          <v-btn block @click="yes" color="green">Continue</v-btn>
+        </v-col>
       </v-card-actions>
     </v-card>
   </v-dialog>

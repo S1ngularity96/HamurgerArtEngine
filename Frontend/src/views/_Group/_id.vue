@@ -2,7 +2,7 @@
   <v-container v-if="group" fluid>
     <yesno-dialog
       v-model="deleteDialog"
-      @yes="deleteGroup"
+      @yes="deleteGroup(group._id)"
       title="Continue?"
       text="By pressing continue your group and all associations will be removed."
       :width="500"
@@ -15,7 +15,7 @@
       v-model="group.images"
     ></image-select-dialog>
     <v-toolbar dense flat>
-      <v-toolbar-title>{{ group.name }} - {{group.images.length}} Groupitems</v-toolbar-title>
+      <v-toolbar-title>{{ group.name }} - {{ group.images.length }} Groupitems</v-toolbar-title>
       <v-spacer></v-spacer>
       <v-btn @click="deleteDialog = true" icon>
         <v-icon>mdi-trash-can</v-icon>
@@ -51,7 +51,7 @@
           <v-card-text>
             <v-text-field hide-details outlined label="Name" v-model="group.name"></v-text-field>
             <v-checkbox disabled v-model="group.exclusive" label="Exclusive Group"></v-checkbox>
-            <v-btn block outlined color="green" @click="selectDialog = true">Add Images</v-btn>
+            <v-btn block  color="green" @click="selectDialog = true">Add Images</v-btn>
           </v-card-text>
           <v-card-text>
             <v-btn @click="patchGroup" block color="primary">Save</v-btn>
@@ -119,9 +119,9 @@ export default {
     onSelect(images) {
       this.group.images = images;
     },
-    async deleteGroup() {
+    async deleteGroup(groupId) {
       try {
-        await this.$axios.delete(`/api/layers/group/${this.group.id}`);
+        await this.$axios.delete(`/api/layers/group/${groupId}`);
         this.$router.push("/");
       } catch (err) {
         this.$snackbar.errorhandle(err);

@@ -54,10 +54,10 @@
             <v-container>
               <v-row>
                 <v-col cols="6">
-                  <v-btn block outlined color="red" @click="resetFilters">Reset</v-btn>
+                  <v-btn block  color="red" @click="resetFilters">Reset</v-btn>
                 </v-col>
                 <v-col cols="6">
-                  <v-btn block outlined color="green" @click="applyFilters">Search</v-btn>
+                  <v-btn block  color="green" @click="applyFilters">Search</v-btn>
                 </v-col>
               </v-row>
             </v-container>
