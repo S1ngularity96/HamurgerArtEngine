@@ -95,6 +95,7 @@ export default {
           this.attributes
         );
         this.attributes = response.data.data;
+        this.$emit("change", null);
         this.$snackbar.success("Saved successfully");
       } catch (err) {
         this.$snackbar.error(err.toString());

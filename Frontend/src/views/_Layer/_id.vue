@@ -6,7 +6,9 @@
           <v-row>
             <v-col cols="3" v-for="(image, index) in layer.images" :key="index">
               <v-card @click="select(image)">
-                <v-card-title>{{ image.name | removeExtension }}</v-card-title>
+                <v-card-title :class="{ 'orange': image.conflicts.length > 0 }">{{
+                  image.name | removeExtension
+                }}</v-card-title>
                 <v-img
                   class="card--image"
                   :src="`http://${host.host}:${host.port}/static/layers/${image.filepath}`"
@@ -17,7 +19,11 @@
         </v-responsive>
       </v-col>
       <v-col cols="3">
-        <image-attributes :selected="selected" :layername="layer.name"></image-attributes>
+        <image-attributes
+          @change="reload"
+          :selected="selected"
+          :layername="layer.name"
+        ></image-attributes>
       </v-col>
     </v-row>
   </v-container>
@@ -57,6 +63,9 @@ export default {
       } catch (err) {
         this.$snackbar.error(err.toString());
       }
+    },
+    async reload() {
+      await this.getLayerByName(this.$route.params.id);
     },
     changeAttributes(image) {
       this.selected = image;
