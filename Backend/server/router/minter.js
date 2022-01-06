@@ -2,6 +2,7 @@ const router = require("express").Router();
 const minterController = require("../controller/minter");
 
 router.post("/init", minterController.postInitMinter, minterController.getMintedImages);
+router.post("/validateConfiguration", minterController.validateMinterConfig);
 router.get("/stop", minterController.getStopMinter);
 router.get("/shuffle", minterController.getShuffle, minterController.getMintedImages);
 router.post("/images/:skip", minterController.getMintedImages);

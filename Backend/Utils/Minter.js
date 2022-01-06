@@ -6,6 +6,7 @@ const { Canvas, Image } = require("canvas");
 const { GeneratedImage } = require("../models/dbmodels");
 const SocketIO = require("../server/websocket/sock");
 const fs = require("fs");
+const { Socket } = require("dgram");
 
 class Minter {
   constructor() {
@@ -89,7 +90,7 @@ class Minter {
   getStatistics() {}
 
   /**
-   *
+   * Execute image-generation and save images
    * @param {Number} limit set the limit for the number of images
    * @param {Number} optIndex set atIndex-value by this parameter
    * @param {Number} stepSize set the increment-size
@@ -113,6 +114,7 @@ class Minter {
           if (res.overflow) {
             numOfOverflows++;
             group.overflow = true;
+            sockio.emit("/mint/overflow", { overflow: true });
           }
           if (res.conflicts === false && !group.overflow) {
             group.imageIds = this.getAssociatedImageIds(group, res.number);
@@ -135,7 +137,10 @@ class Minter {
         while (atIndex < limit && group.overflow === false && this.running) {
           let res = this.next(group, stepSize);
           group.overflow = res.overflow;
-          if (group.overflow) break;
+          if (group.overflow) {
+            sockio.emit("/mint/overflow", { overflow: true });
+            break;
+          }
           if (res.conflicts === false) {
             group.imageIds = this.getAssociatedImageIds(group, res.number);
             let { absolute, relative } = await this.saveMinted(atIndex, group.imageIds);
@@ -154,6 +159,67 @@ class Minter {
     return atIndex;
   }
 
+  /**
+   * Validate if with given parameters image-generation will come to end
+   * @param {Number} limit set the limit for the number of images
+   * @param {Number} optIndex set atIndex-value by this parameter
+   * @param {Number} stepSize set the increment-size
+   * @param {Boolean} parallel set if groups should be processed in parallel
+   * @returns
+   */
+  validateCombinations(limit, stepSize, parallel, optIndex) {
+    let atIndex = optIndex ? optIndex : 0;
+    const groupLen = this.groups.length;
+    this.running = true;
+    let statistics = {
+      overflow: 0,
+      conflicts: 0,
+    };
+
+    if (parallel && groupLen > 0) {
+      let currentGroupIndex = 0;
+      let numOfOverflows = 0;
+      while (atIndex < limit && numOfOverflows !== groupLen && this.running) {
+        let group = this.groups[currentGroupIndex];
+        if (!group.overflow) {
+          let res = this.next(group, stepSize);
+          if (res.overflow) {
+            numOfOverflows++;
+            group.overflow = true;
+            statistics.overflow = statistics.overflow + 1;
+          }
+          if (res.conflicts === false && !group.overflow) {
+            group.imageIds = this.getAssociatedImageIds(group, res.number);
+            atIndex++;
+          } else {
+            statistics.conflicts = statistics.conflicts + 1;
+          }
+        }
+        currentGroupIndex = (currentGroupIndex + 1) % groupLen; //loop each group
+      }
+    } else {
+      //sequentual process
+      for (let groupIndex = 0; groupIndex < groupLen; groupIndex++) {
+        let group = this.groups[groupIndex];
+        while (atIndex < limit && group.overflow === false && this.running) {
+          let res = this.next(group, stepSize);
+          group.overflow = res.overflow;
+          if (group.overflow) {
+            statistics.overflow = statistics.overflow + 1;
+            break;
+          }
+          if (res.conflicts === false) {
+            group.imageIds = this.getAssociatedImageIds(group, res.number);
+            atIndex++;
+          } else {
+            statistics.conflicts = statistics.conflicts + 1;
+          }
+        }
+      }
+    }
+    return statistics;
+  }
+
   async stopMinter() {
     this.running = false;
   }
@@ -166,7 +232,7 @@ class Minter {
     let base64Data = baseImage.replace(/^data:image\/png;base64,/, "");
     let filepath = `${imagesDir}/${index}`;
     fs.writeFileSync(filepath, base64Data, "base64");
-    return { absolute: filepath, relative: `/generated/${index}`};
+    return { absolute: filepath, relative: `/generated/${index}` };
   }
 
   next(group, stepSize) {

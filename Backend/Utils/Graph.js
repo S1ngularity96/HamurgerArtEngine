@@ -5,6 +5,7 @@ class Graph {
 
   addNode(id, name) {
     if (this.nodes.has(id)) {
+      return this.nodes.get(id);
       //throw new Error(`$Node with ID ${node.id} exists.`);
     } else {
       let node = new Node(id, name);

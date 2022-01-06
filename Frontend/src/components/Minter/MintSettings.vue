@@ -58,6 +58,9 @@
                 <v-btn block @click="$emit('shuffle', config)" color="orange">Shuffle</v-btn>
               </v-col>
               <v-col cols="12">
+                <v-btn block @click="$emit('validate', config)" color="green">Validate</v-btn>
+              </v-col>
+              <v-col cols="12">
                 <v-btn @click="$emit('mint', config)" block color="green">{{ mintText }}</v-btn>
               </v-col>
             </v-row>

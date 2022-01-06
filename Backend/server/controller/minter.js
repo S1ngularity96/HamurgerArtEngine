@@ -1,6 +1,6 @@
 const api = require("../helper/api");
 const Minter = require("../../Utils/Minter");
-const { layersDir, publicDir, imagesDir, env } = require("../../config");
+const { imagesDir, env } = require("../../config");
 const { Layer, ImageGroup } = require("../../models/dbmodels");
 const { GeneratedImage, Image } = require("../../models/dbmodels");
 const { generateShuffledSequence } = require("../../Utils/Shuffle");
@@ -112,6 +112,63 @@ async function postInitMinter(req, res, next) {
   }
 }
 
+async function validateMinterConfig(req, res) {
+  let { all, groups, limit, stepSize, parallel, continueMint } = req.body.config;
+  let optIndex = 0;
+  limit = limit > 0 ? limit : 10000;
+
+  if (continueMint) {
+    optIndex = await GeneratedImage.find({}).count();
+  }
+
+  try {
+    if (all === true) {
+      let layer = await Layer.find({}).populate({ path: "images" });
+      const minter = new Minter();
+      minter.clearGroups();
+      minter.addGroup(layer);
+      let result = minter.validateCombinations(limit, stepSize, parallel, optIndex);
+      console.log(result);
+      if (result.overflow > 0) {
+        api.BadRequestResponse(res, [
+          "Generator overflows!",
+          `Found conflicts: ${result.conflicts}`,
+        ]);
+        return;
+      }
+      api.successResponse(res, "Configuration validated!");
+      return;
+    } else {
+      let allgroups = await ImageGroup.find({ _id: groups }).populate({
+        path: "images",
+        populate: { path: "layer", select: "_id, order" },
+      });
+      let layer = await Layer.find({});
+      const minter = new Minter();
+      minter.clearGroups();
+
+      for (let group = 0; group < allgroups.length; group++) {
+        //make deep clone to not fetch data from database again
+        let tmpLayers = cloneDeep(layer);
+        let layerGroup = await createLayersFromGroup(tmpLayers, allgroups[group]);
+        minter.addGroup(layerGroup);
+      }
+      let result = minter.validateCombinations(limit, stepSize, parallel, optIndex);
+      if (result.overflow > 0) {
+        api.BadRequestResponse(res, [
+          "Generator overflows!",
+          `Found conflicts: ${result.conflicts}`,
+        ]);
+        return;
+      }
+      api.successResponse(res, "Configuration validated!");
+      return;
+    }
+  } catch (err) {
+    api.ErrorResponse(res, err.toString());
+  }
+}
+
 async function getNext(req, res) {
   try {
     const minter = new Minter();
@@ -203,6 +260,52 @@ async function getMetadataById(req, res) {
   }
 }
 
+async function getMetadataFilesReady(req, res, next) {
+  if (!fs.existsSync(settingsFile)) {
+    api.ErrorResponse(res, "Please add settings for metadata");
+    return;
+  }
+
+  try {
+    let settingsJSON = fs.readFileSync(settingsFile);
+    let settings = JSON.parse(settingsJSON);
+
+    let images = await GeneratedImage.find({})
+      .sort({ order: "asc" })
+      .populate({
+        path: "images",
+        select: "name",
+        populate: { path: "layer", select: "name" },
+      });
+
+    images = images.map((image) => {
+      return {
+        name: `${settings.assetprefix}${image.order}`,
+        description: `${settings.description}`,
+        tokenId: image.order,
+        image: `${settings.baseURI}${image.order}`,
+        attributes: image.images.map((attribute) => {
+          return {
+            trait_type: attribute.layer.name,
+            value: attribute.name.replace(".jpg", "").replace(".png", ""),
+          };
+        }),
+      };
+    });
+
+    if (!fs.existsSync(imagesDir)) fs.mkdirSync(imagesDir);
+    let imagesLen = images.length;
+
+    images.forEach((value, index) => {
+      fs.writeFileSync(JSON.stringify(value), path.join(imagesDir, `${index}.json`));
+    });
+
+    next();
+  } catch (err) {
+    api.ErrorResponse(res, err.toString());
+  }
+}
+
 async function getDownload(req, res) {
   const zipFile = `${publicDir}/minted.zip`;
   try {
@@ -262,4 +365,5 @@ module.exports = {
   getStatistics,
   getMetadataOfImages,
   getMetadataById,
+  validateMinterConfig,
 };

@@ -54,10 +54,10 @@
             <v-container>
               <v-row>
                 <v-col cols="6">
-                  <v-btn block  color="red" @click="resetFilters">Reset</v-btn>
+                  <v-btn block color="red" @click="resetFilters">Reset</v-btn>
                 </v-col>
                 <v-col cols="6">
-                  <v-btn block  color="green" @click="applyFilters">Search</v-btn>
+                  <v-btn block color="green" @click="applyFilters">Search</v-btn>
                 </v-col>
               </v-row>
             </v-container>
@@ -89,6 +89,7 @@
           mintText="Start minting"
           @mint="prepareForMint"
           @shuffle="getShuffle"
+          @validate="postValidateConfiguration"
         ></mint-settings>
       </v-col>
     </v-row>
@@ -109,6 +110,11 @@ export default {
         this.mintdialog.opened = data.running;
         this.mintdialog.created = data.created;
         this.mintdialog.limit = data.of;
+      }
+    },
+    "/mint/overflow": function(data) {
+      if (data.overflow === true) {
+        this.$snackbar.info("Overflow occured!");
       }
     },
   },
@@ -176,7 +182,7 @@ export default {
       this.startMinting();
     },
     async startMinting() {
-      if (this.config === null) this.$snackbar.error("Konfiguration nicht geladen");
+      if (this.config === null) this.$snackbar.error("Configuration not loaded");
       this.continueDialog = false;
       try {
         this.slides = [];
@@ -184,6 +190,18 @@ export default {
           config: { ...this.config },
         });
         this.setMintedImagesData(response);
+      } catch (err) {
+        this.$snackbar.errorhandle(err);
+      }
+    },
+    async postValidateConfiguration(config) {
+      console.log(config);
+      if (config === null) this.$snackbar.error("Configuration not loaded");
+      try {
+        let response = await this.$axios.post("/api/minter/validateConfiguration", {
+          config: { ...config },
+        });
+        this.$snackbar.success(response.data.message);
       } catch (err) {
         this.$snackbar.errorhandle(err);
       }
