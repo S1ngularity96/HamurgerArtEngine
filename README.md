@@ -1,6 +1,7 @@
-# ImageMinter
+# HamburgerArtEngine
 
-ImageMinter generates random images end ERC721 metadata from multiple image layers.
+Stack layers from *.png or *.jpeg based layers and generate unique collections. 
+Inspired by [Hashilips ArtEngine](https://github.com/HashLips/hashlips_art_engine)
 
 # Setup Guide
 
