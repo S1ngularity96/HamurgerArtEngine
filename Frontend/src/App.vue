@@ -1,13 +1,18 @@
 <template>
   <v-app>
+    <snack-bar></snack-bar>
     <nav-drawer></nav-drawer>
-    <v-app-bar app dense>
+    <v-app-bar :flat="$vuetify.theme.dark" app dense >
       <v-toolbar-title>{{ $route.name }}</v-toolbar-title>
       <v-spacer></v-spacer>
-      <v-switch v-model="$vuetify.theme.dark" hide-details inset label="Darkmode"></v-switch>
+      <v-switch
+        v-model="$vuetify.theme.dark"
+        hide-details
+        inset
+        append-icon="mdi-theme-light-dark"
+      ></v-switch>
     </v-app-bar>
     <v-main>
-      <snack-bar></snack-bar>
       <v-container fluid>
         <router-view />
       </v-container>
@@ -24,6 +29,15 @@ export default {
     "nav-drawer": Nav,
     "snack-bar": Snackbar,
   },
-  data: () => ({}),
+  data() {
+    return {
+      navitems: [
+        { name: "Layer", icon: "mdi-folder-multiple-image", to: "/" },
+        { name: "Minter", icon: "mdi-hammer-screwdriver", to: "/minter" },
+        { name: "Statistics", icon: "mdi-chart-bar-stacked", to: "/stats" },
+        { name: "Settings", icon: "mdi-cog", to: "/settings" },
+      ],
+    };
+  },
 };
 </script>

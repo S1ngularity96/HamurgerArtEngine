@@ -23,7 +23,7 @@ services:
       ME_CONFIG_MONGODB_URL: mongodb://root:3ei0kiMxfYnXtWlec6Ok@mongo:27017/
 
   backend-dev:
-    image: minter-backend
+    image: minter-backend-dev
     depends_on:
       - mongo
     build:
@@ -33,9 +33,10 @@ services:
       - 8000:8000
     volumes:
       - ./Backend:/backend
+      - /backend/node_modules
 
   frontend-dev:
-    image: minter-frontend
+    image: minter-frontend-dev
     depends_on:
       - backend-dev
     build:
@@ -45,3 +46,4 @@ services:
       - 8080:8080
     volumes:
       - ./Frontend:/app
+      - /app/node_modules

@@ -1,5 +1,5 @@
 <template>
-  <v-navigation-drawer app permanent expand-on-hover>
+  <v-navigation-drawer app permanent  expand-on-hover width="256px">
     <v-list nav dense>
       <v-list-item v-for="(item, index) in navitems" :key="index" :to="item.to">
         <v-list-item-icon>
